@@ -75,8 +75,8 @@ def get_thru_quarter(x):
 
 
 # Merge all review text files into one file
-merge_individual_to_all(names, '2008 to 2018 SnP 500 Firm Data Before All/')
-move_all_to_final_folder('2008 to 2018 SnP 500 Firm Data Before All', '2008 to 2018 SnP 500 Firm Data All')
+merge_individual_to_all(names, 'data/2008 to 2018 SnP 500 Firm Data Before All/')
+move_all_to_final_folder('data/2008 to 2018 SnP 500 Firm Data Before All', 'data/2008 to 2018 SnP 500 Firm Data All')
 
 
 # Call S&P constituents data
