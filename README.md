@@ -13,4 +13,5 @@ I collected Glassdoor review data of every company who belonged to S&P 500 at le
 - approval of CEO
 - recommendation to friend
 - business outlook.
+
 Therefore, it is possible to take apart a written text and analyze it in the above aspects.
