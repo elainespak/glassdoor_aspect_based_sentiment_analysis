@@ -13,7 +13,7 @@ from random import randint
 
 
 # Get the names of the S&P 500 companies
-alldat = pd.read_csv('2018_SnP500_Names_Subsidiaries.csv', delimiter=',')
+alldat = pd.read_csv('./2018_SnP500_Names_Subsidiaries.csv', delimiter=',')
 names = alldat.Company
 
 def get_company_token(company):
@@ -29,21 +29,22 @@ def get_company_token(company):
     options.add_argument("--test-type")
     options.binary_location = "/usr/bin/chromium"
     driver = webdriver.Chrome() # paranthesis is empty since the driver is in the same path
-    driver.get('https://www.google.com') # it is faster to google than to search for the company on Glassdoor (crappy site)
+    driver.get('http://google.com/') # it is faster to google than to search for the company on Glassdoor (crappy site)
     
     # Iterate through the list of company names
     search_text = 'glassdoor ' + company + ' Reviews'
     search = driver.find_element_by_name('q')
     search.send_keys(search_text)
     search.send_keys(Keys.RETURN) # hits return after you enter the search text
-    time.sleep(1)
+    time.sleep(2)
     
-    links = driver.find_elements_by_partial_link_text('https://www.glassdoor.com/Reviews/')
+    #links = driver.find_elements_by_partial_link_text('glassdoor.com/Reviews/')
+    links = driver.find_element_by_partial_link_text('Reviews | Glassdoor')
     try:
-        full_link = links[0].get_attribute('href')
+        full_link = links.get_attribute('href')
         company_token = re.search('(?<=Reviews/)([\w-]*)(?=.htm)',full_link)[1] # the token is between 'Reviews/' and '.htm'
     except:
-        print('No.' + str(list(names).index(name)) + ' company "' + name + '" reviews do not exist, sth is off')
+        print('No.' + str(list(names).index(company)) + ' company "' + company + '" reviews do not exist, sth is off')
         company_token = 'notoken'
     
     driver.quit()
@@ -65,7 +66,7 @@ def get_individual_reviews(webpage_text):
     '''
     Each review posted for the company as of (today)
     '''
-    review_lst = re.findall('(?<={"isLegal":true,)(.*?)(?={"reviewDetailUrl")', apollo) # .*? means "any" ; ?: will prevent interference
+    review_lst = re.findall('(?<={"isLegal":true,)(.*?)(?={"reviewDetailUrl")', webpage_text) # .*? means "any" ; ?: will prevent interference
     review_lst = [review[:-12]+'}' for review in review_lst] # HARDCODING. need a better solution..
     review_dct_lst = []
 
@@ -105,88 +106,20 @@ def get_individual_reviews(webpage_text):
     return review_dct_lst
 
 
-## Runs fine except for the "big companies"
-
-for name in names:
+if __name__ == "__main__":
     
-    # Generate the company-specific part of the url
-    company_token = get_company_token(name)
-    #company_token = 'Scripps-Networks-Interactive-Reviews-E38201'
-    #company_token = 'First-Republic-Bank-Reviews-E859'
+    company_token = get_company_token(alldat.Company[2])
+    print(f'This is test company token: {company_token}')
     
-    if company_token == 'notoken':
-        # Print if no Glassdoor reviews exist
-        print('No.' + str(list(names).index(name)) + ' company "' + name + '" reviews do not exist')
-    else:
-        
-        # Avoid max retries error
-        #session = requests.Session()
-        #retry = Retry(connect=3, backoff_factor=0.5)
-        #adapter = HTTPAdapter(max_retries=retry)
-        #session.mount('http://', adapter)
-        #session.mount('https://', adapter)
-        
-        # Access the Glassdoor reviews page
-        url = 'https://www.glassdoor.com/Reviews/' + company_token
-        page_number = ''
-        num = 2
-        html = '.htm'
-        #page = session.get(url+page_number+html, headers={'user-agent': 'Mozilla/5.0'})
-        page = requests.get(url+page_number+html, headers={'user-agent': 'Mozilla/5.0'})
-        webpage = page.text
-        apollo = webpage.split('<script>window.__APOLLO_STATE__')[1]
-
-        # First, get the overall stats
-        overall_stats = {name: get_overall_stats(apollo)}
-
-        # Save the overall stats data into a text file
-        with open(re.sub(' ', '_', name)+'_overall_stats.txt', 'w') as file:
-             file.write(json.dumps(overall_stats))
-
-        # Secondly, get the individual reviews
-        individual_reviews = {dct['reviewId']: dct for dct in get_individual_reviews(apollo)} 
-        end_of_reviews = False
-
-        while end_of_reviews is False:
-            page_number = '_P' + str(num) # Go to the next review page
-            page = requests.get(url+page_number+html, headers={'user-agent': 'Mozilla/5.0'})
-            webpage = page.text
-
-            if 'reviewId' not in webpage: # If we run out of pages, exit the while loop
-                end_of_reviews = True
-            else:
-                apollo = webpage.split('<script>window.__APOLLO_STATE__')[1]
-                for dct in get_individual_reviews(apollo):
-                    individual_reviews[dct['reviewId']] = dct
-
-                if num%100 == 0: # If we reach page 300, save the crawled data into a txt file and empty it
-                    with open(re.sub(' ', '_', name)+'_individual_reviews_'+str(num/100)+'.txt', 'w') as file:
-                        file.write(json.dumps(individual_reviews))
-                    individual_reviews.clear()
-                    individual_reviews = {dct['reviewId']: dct for dct in get_individual_reviews(apollo)} 
-
-                num += 1
-
-            time.sleep(randint(2,3))
-
-        # Print if successfully scraped all the reviews
-        #print('No.' + str(list(names).index(name)) + ' company "' + name + '" reviews all scraped')
-        print('Company ' + name + ' reviews all scraped')
-        
-        # Save the rest of the individual reviews data into a text file
-        with open(re.sub(' ', '_', name)+'_individual_reviews_end.txt', 'w') as file:
-             file.write(json.dumps(individual_reviews))
-
-        # Empty the dictionarys
-        #if bool(individual_reviews):
-        #    individual_reviews.clear()
-        if bool(overall_stats):
-            overall_stats.clear()
-
-    print(str(len(list(names)) - list(names).index(name) - 1) + ' more companies to go')
-    print('---------------------------')
-    time.sleep(5)
-
-
-
-
+    url = 'https://www.glassdoor.com/Reviews/' + company_token
+    page_number = ''
+    num = 2
+    html = '.htm'
+    page = requests.get(url+page_number+html, headers={'user-agent': 'Mozilla/5.0'})
+    webpage = page.text
+    
+    overall_stats = get_overall_stats(webpage)
+    print(f'This is overall stats: \n{overall_stats}')
+    
+    ten_reviews = get_individual_reviews(webpage)
+    print(f'This is the first ten reviews(test): \n{ten_reviews}')
