@@ -15,3 +15,7 @@ I collected Glassdoor review data of every company who belonged to S&P 500 at le
 - business outlook.
 
 Therefore, it is possible to take apart a written text and analyze it in the above aspects.
+
+Some of the text mining techniques that I have applied so far:
+- Word2Vec from [this paper](https://arxiv.org/pdf/1301.3781.pdf)
+- Latent aspect rating analysis from [this paper](https://www.cs.virginia.edu/~hw5x/paper/rp166f-wang.pdf)
