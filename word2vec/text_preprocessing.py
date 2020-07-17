@@ -38,9 +38,10 @@ if __name__ == "__main__":
     alldat = pd.read_csv('./sample_data/2008_to_2018_SnP500_Names.csv', delimiter=',')
     names = list(alldat['conml'])
     gvkeys = list(alldat['gvkey'])
-    companies_all = [(names[i],gvkeys[i])for i in range(len(alldat))]
+    companies_all = [(names[i],gvkeys[i]) for i in range(len(alldat))]
     print(f'company-gvkey pair check: \n{companies_all[:3]}')
 
+    # 1. Build 1-gram sentences
     sentences = []
     for name,gvkey in tqdm(companies_all):
         name = name.replace(' ','_')
@@ -57,6 +58,14 @@ if __name__ == "__main__":
         except:
             print(f'No glassdoor data for {name}')
     print(f'total length of sentences: \n{len(sentences)}')
-    
+    # Save 1-gram sentences
     with open('./sample_output/preprocessed_sentences_1gram.pkl', 'wb') as f:
+        pickle.dump(sentences, f)
+    
+    # 2. Build 2-gram sentences
+    sentences2_model = build_phrases(sentences)
+    sentences2 = list(sentences2_model[sentences]) # Add bi-grams to the corpus
+    print(f'example of bi-gram sentence: \n{sentences2[9]}')
+    # Save 2-gram sentences
+    with open('./sample_output/preprocessed_sentences_2gram.pkl', 'wb') as f:
         pickle.dump(sentences, f)
