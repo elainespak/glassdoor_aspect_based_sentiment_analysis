@@ -6,6 +6,7 @@ import json
 import pickle
 import pandas as pd
 from tqdm import tqdm
+from nltk.corpus import stopwords
 from spacy.lang.en.stop_words import STOP_WORDS
 from gensim.models.phrases import Phrases, Phraser
 
@@ -21,8 +22,9 @@ def clean_sentence(sentence):
     sentence = re.sub(r'[^a-z0-9\s]', '', sentence)
     return re.sub(r'\s{2,}', ' ', sentence)
 
-def tokenize(sentence):
-    return [token for token in sentence.split() if token not in STOP_WORDS]
+def tokenize(sentence, replace_punctuation):
+    sentence = sentence.translate(replace_punctuation)
+    return [token for token in sentence.split() if token not in stopwords]#STOP_WORDS]
 
 def build_phrases(sentences):
     phrases = Phrases(sentences,
@@ -40,9 +42,11 @@ if __name__ == "__main__":
     gvkeys = list(alldat['gvkey'])
     companies_all = [(names[i],gvkeys[i]) for i in range(len(alldat))]
     print(f'company-gvkey pair check: \n{companies_all[:3]}')
-
+    
     # 1. Build 1-gram sentences
     sentences = []
+    replace_punctuation = string.maketrans(string.punctuation,
+                                                   ' '*len(string.punctuation))
     for name,gvkey in tqdm(companies_all):
         name = name.replace(' ','_')
         try:
