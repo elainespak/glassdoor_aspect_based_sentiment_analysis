@@ -4,9 +4,10 @@ import re
 import json
 import langid
 from nltk.corpus import stopwords
+from itertools.chain import from_iterable
 from nltk.stem.porter import PorterStemmer
-from nltk import word_tokenize, sent_tokenize
 from gensim.models.phrases import Phrases, Phraser
+from nltk import word_tokenize, sent_tokenize, FreqDist
 stemmer = PorterStemmer()
 
 
@@ -82,6 +83,12 @@ def make_ngrams_model(tokenized_sents, set_min_count=5, set_threshold=20):
     return bigram_mod, trigram_mod
 
 
+def make_ngrams(bigram_mod, trigram_mod, tokenized_sents):
+    b = [bigram_mod[sent] for sent in tokenized_sents]
+    t = [trigram_mod[bigram_mod[sent]] for sent in tokenized_sents]
+    return b, t
+
+
 def stemming(tokenized_sents):
     sentences = []
     for sent in tokenized_sents:
@@ -90,3 +97,14 @@ def stemming(tokenized_sents):
             sentences.append(stemmed)
     return sentences
 
+
+def create_vocab(sent):
+    # Gather every word from every sentence into one list
+    words = list(from_iterable(sent))
+    # Count occurrence of every word
+    freq = FreqDist(words)
+    # Create the official "vocab" with only frequent words
+    vocab = [k for k,v in freq.items() if v > 0]
+    # Assign a special unique number corresponding to each word
+    vocab_dict = dict(zip(vocab, range(len(vocab))))
+    return vocab, vocab_dict
