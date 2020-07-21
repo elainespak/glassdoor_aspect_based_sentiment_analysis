@@ -4,13 +4,23 @@ import re
 import json
 import nltk
 import langid
+import fasttext
 import itertools
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from gensim.models.phrases import Phrases, Phraser
 from nltk import word_tokenize, sent_tokenize, FreqDist
-nltk.download('stopwords')
+
 stemmer = PorterStemmer()
+nltk.download('stopwords')
+lid_model = fasttext.load_model('lid.176.ftz') # '/tmp/lid.176.bin' 
+
+
+def is_english(sentence):
+    if '__label__en' == lid_model.predict(sentence)[0]:
+        return True
+    else:
+        return False
 
 
 def to_one_list(lists):
@@ -26,6 +36,7 @@ def load_file(file, text='pros'):
     if type(text) != list:
         for r in f:
             try:
+                # if is_english(r.get(text)) is True:
                 if langid.classify(r.get(text))[0]=='en':
                     temp.append((r.get(text), r.get('ratingOverall')))
             except:
@@ -34,6 +45,7 @@ def load_file(file, text='pros'):
         for r in f:
             text_concat = []
             try:
+                #if False in [is_english(r.get(t)) for t in text]
                 is_all_english = [langid.classify(r.get(t))[0] for t in text]
                 if list(set(is_all_english)) == ['en']:
                     for t in text:
