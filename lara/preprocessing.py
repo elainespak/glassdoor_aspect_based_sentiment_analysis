@@ -53,7 +53,7 @@ def load_file(file, text='pros'):
 def parse_all_reviews_to_sentence(reviews, remove_company_list, replace_punctuation):
     """
     # review_processed: list of review, which is a list of processed sentences
-    # raw: original review, which is a list of sentences
+    # raw: list of review, which is a list of raw sentences
     # only_sent: list of processed sentences
     """
     review_processed = []
