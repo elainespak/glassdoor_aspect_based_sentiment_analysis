@@ -5,7 +5,7 @@ import json
 import math
 import langid
 import numpy as np
-from lara.text_processing import *
+from text_preprocessing import *
 from nltk.stem.porter import PorterStemmer
 from nltk import sent_tokenize, word_tokenize, FreqDist
 stemmer = PorterStemmer()

@@ -2,14 +2,22 @@
 
 import re
 import json
+import nltk
 import langid
+import itertools
 from nltk.corpus import stopwords
-from itertools.chain import from_iterable
 from nltk.stem.porter import PorterStemmer
 from gensim.models.phrases import Phrases, Phraser
 from nltk import word_tokenize, sent_tokenize, FreqDist
+nltk.download('stopwords')
 stemmer = PorterStemmer()
 
+
+def to_one_list(lists):
+    '''
+    # list of lists to one list , e.g. [[1,2],[3,4]] -> [1,2,3,4]
+    '''
+    return list(itertools.chain.from_iterable(lists))
 
 def load_file(file, text='pros'):    
     f = json.load(open(file))
@@ -51,6 +59,7 @@ def parse_all_reviews_to_sentence(reviews, remove_company_list, replace_punctuat
     review_processed = []
     raw = []
     only_sent = []
+    keep_track = 0
     for r in reviews:
         sentences = sent_tokenize(r)
         # Often, glassdoor reviews are in a list
@@ -68,10 +77,13 @@ def parse_all_reviews_to_sentence(reviews, remove_company_list, replace_punctuat
                     s = s.replace(company_mention, '')
 			#remove punctuations and stopwords
             s = s.translate(replace_punctuation)
-            s = [w for w in word_tokenize(s) if not w in stopwords]
+            s = [w for w in word_tokenize(s) if not w in stopwords.words('english')]
             sent.append(s)
         review_processed.append(sent)
         only_sent.extend(sent)
+        keep_track += 1
+        if keep_track % 5000 == 0:
+            print(f'{keep_track}/{len(reviews)} done!')
     return review_processed, raw, only_sent
 
 
@@ -100,7 +112,7 @@ def stemming(tokenized_sents):
 
 def create_vocab(sent):
     # Gather every word from every sentence into one list
-    words = list(from_iterable(sent))
+    words = to_one_list(sent)
     # Count occurrence of every word
     freq = FreqDist(words)
     # Create the official "vocab" with only frequent words
@@ -108,3 +120,4 @@ def create_vocab(sent):
     # Assign a special unique number corresponding to each word
     vocab_dict = dict(zip(vocab, range(len(vocab))))
     return vocab, vocab_dict
+
