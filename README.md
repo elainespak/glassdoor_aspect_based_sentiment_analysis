@@ -20,3 +20,8 @@ I collected Glassdoor review data of every company that belonged to S&P 500 at l
 Some of the text mining techniques that I have applied so far:
 - Word2Vec from [this paper](https://arxiv.org/pdf/1301.3781.pdf)
 - Latent aspect rating analysis from [this paper](https://www.cs.virginia.edu/~hw5x/paper/rp166f-wang.pdf)
+
+## Preprocessing
+1. Select only English reviews
+   - Method: Pre-trained FastText model (considered a SOTA for language identification as of July, 2020)
+2. Remove stopwords, remove punctuations, all lower case, bi-gram, stemming
