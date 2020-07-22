@@ -3,7 +3,6 @@
 import re
 import json
 import nltk
-import langid
 import fasttext
 import itertools
 from nltk.corpus import stopwords
@@ -13,20 +12,19 @@ from nltk import word_tokenize, sent_tokenize, FreqDist
 
 stemmer = PorterStemmer()
 nltk.download('stopwords')
-lid_model = fasttext.load_model('lid.176.ftz') # '/tmp/lid.176.bin' 
+lid_model = fasttext.load_model('lid.176.bin') 
 
 
 def is_english(sentence):
-    if '__label__en' == lid_model.predict(sentence)[0]:
+    """ input sentence should be a string """
+    if '__label__en' == lid_model.predict(sentence)[0][0]:
         return True
     else:
         return False
 
 
 def to_one_list(lists):
-    '''
-    # list of lists to one list , e.g. [[1,2],[3,4]] -> [1,2,3,4]
-    '''
+    """ list of lists to one list , e.g. [[1,2],[3,4]] -> [1,2,3,4] """
     return list(itertools.chain.from_iterable(lists))
 
 def load_file(file, text='pros'):    
@@ -35,28 +33,18 @@ def load_file(file, text='pros'):
     temp = []
     if type(text) != list:
         for r in f:
-            try:
-                # if is_english(r.get(text)) is True:
-                if langid.classify(r.get(text))[0]=='en':
-                    temp.append((r.get(text), r.get('ratingOverall')))
-            except:
-                print('error with langdetect')
+            if is_english(r.get(text)) is True:
+                temp.append((r.get(text), r.get('ratingOverall')))
     else:
         for r in f:
+            length_text = [len(r.get(t)) for t in text]
+            idx = length_text.index(max(length_text))
             text_concat = []
-            try:
-                #if False in [is_english(r.get(t)) for t in text]
-                is_all_english = [langid.classify(r.get(t))[0] for t in text]
-                if list(set(is_all_english)) == ['en']:
-                    for t in text:
-                        text_concat.append(r.get(t))
-                    text_all = '. '.join(text_concat)
-                    temp.append((text_all, r.get('ratingOverall')))
-                # Not all parts are in English, so discard the review
-                else:
-                    pass
-            except:
-                pass
+            if is_english(r.get(text[idx])) is True:
+                for t in text:
+                    text_concat.append(r.get(t))
+                text_all = '. '.join(text_concat)
+                temp.append((text_all, r.get('ratingOverall')))
     reviews = [t[0] for t in temp]
     ratings = [t[1] for t in temp]
     return reviews, ratings
