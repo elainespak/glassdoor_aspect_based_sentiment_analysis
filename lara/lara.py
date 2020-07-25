@@ -17,8 +17,6 @@ if __name__ == "__main__":
     
     path = '../sample_data/2008 to 2018 SnP 500 Firm Data All/'
     output_path = '../sample_output/lara/'
-    remove_list = []#['Abbott', 'Abbott Laboratories', 'Chevron', 'Netflix', '3M', 'Eaton', 'Electronic Arts', 'General Motors', 'GM', 'Merril Lynch', 'Merrill Lynch', 'NextEra', 'NextEra Energy']
-    #remove_list = [r.lower() for r in remove_list]
     text_type = ['summary', 'pros', 'cons', 'advice']
     
     
@@ -27,24 +25,33 @@ if __name__ == "__main__":
     all_reviews = []
     company_list = []
     for file in tqdm(os.listdir(path)):
-        temp_reviews, temp_ratings = load_file(path+file, text=text_type)
+        temp_reviews = load_file(path+file, text=text_type)
         print(f'{file} successfully loaded')
         company_name = file.split('_individual_reviews')[0]
         company_name = company_name.replace('_', ' ')
         company_list.append(company_name)
         for r in temp_reviews:
             all_reviews.append(r)
+    ### Save ###
     with open('../sample_output/lara/raw_english_sentences.pkl', 'wb') as f:
         pickle.dump(all_reviews, f)
     print('--------------------------- Finished loading all files -----------')
     
     replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
-    all_review_processed, all_raw, all_only_sent = parse_all_reviews_to_sentence(all_reviews, remove_list, replace_punctuation)
+    all_review_processed, all_only_sent = parse_all_reviews_to_sentence(all_reviews, replace_punctuation)
+    ### Save ###
+    with open('../sample_output/lara/processed_english_sentences.pkl', 'wb') as f:
+        pickle.dump(all_only_sent, f)
+    with open('../sample_output/lara/processed_english_sentences_per_review.pkl', 'wb') as f:
+        pickle.dump(all_review_processed, f)
     print('--------------------------- Finished parsing reviews to sentences -')
     
     # Create bigram and trigram models and process sentences with them
     b_model, t_model = make_ngrams_model(all_only_sent, 5, 20)
-    all_only_sent, t = make_ngrams(bigram_mod=b_model, trigram_mod=t_model, tokenized_sents=all_only_sent)
+    all_only_sent, _ = make_ngrams(bigram_mod=b_model, trigram_mod=t_model, tokenized_sents=all_only_sent)
+    ### Save ###
+    with open('../sample_output/lara/processed_english_sentences.pkl', 'wb') as f:
+        pickle.dump(all_only_sent, f)
     print('--------------------------- Finished creating n grams ------------')
     
     # Stemming
@@ -53,6 +60,11 @@ if __name__ == "__main__":
     
     # Create vocabs list and vocabs dictionary
     vocab, vocab_dict = create_vocab(only_sent)
+    ### Save ###
+    with open('../sample_output/lara/vocab.pkl', 'wb') as f:
+        pickle.dump(vocab, f)
+    with open('../sample_output/lara/vocab_dict.pkl', 'wb') as f:
+        pickle.dump(vocab_dict, f)
     print('--------------------------- Finished creating vocab & vocab dict -')
     
     ### ------------------------------------ Check how frequent the bigrams are!
@@ -60,7 +72,6 @@ if __name__ == "__main__":
     test_freq = FreqDist(test)
     ok = sorted([(test_freq[k],k) for k,v in vocab_dict.items() if '_' in k], reverse=True)
     print(ok[:15])
-    print(ok[15:30])
     ### ------------------------------------------------------------------------
     
     
@@ -105,7 +116,7 @@ if __name__ == "__main__":
     create_all_W(analyzer,data)
     
     # W matrix for all reviews
-    produce_data_for_rating(analyzer,data,output_path,percompany=False)
+    produce_data_for_rating(analyzer, data, output_path, percompany=False)
     
     # W matrix for reviews per company
-    produce_data_for_rating(analyzer,data,outputfolderpath,percompany=True)
+    produce_data_for_rating(analyzer, data, output_path, percompany=True)
