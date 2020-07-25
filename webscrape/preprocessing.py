@@ -2,9 +2,11 @@
 
 import os
 import json
+import torch
 import fasttext
 import pandas as pd
 lid_model = fasttext.load_model('lid.176.bin') 
+pd.set_option('display.max_columns', 50)
 
 
 def is_english(sentence):
@@ -18,9 +20,10 @@ def is_english(sentence):
 def create_masterfile(path, output_path):
     all_reviews = []
     not_english_reviews = {}
+    i = 1
     
     for file in os.listdir(path):
-        f = json.load(open(file))
+        f = json.load(open(path+file))
         reviews_dict = list(f.values())
         
         company = file.split('_individual_reviews_all.txt')[0]
@@ -30,10 +33,11 @@ def create_masterfile(path, output_path):
         for review_dict in reviews_dict:
             
             # Check if a review is written in English
-            all_text = ['summary', 'pros', 'cons', 'advice']
-            length_text = [len(review_dict[t]) for t in all_text]
+            all_type = [t for t in ['summary', 'pros', 'cons', 'advice'] if review_dict[t] is not None]
+            length_text = [len(review_dict[t]) for t in all_type]
             idx = length_text.index(max(length_text))
-            if is_english(review_dict[all_text[idx]]) is True:
+            text = review_dict[all_type[idx]].replace('\n', '')
+            if is_english(text) is True:
                 
                 # Add company name
                 review_dict['company'] = company
@@ -51,10 +55,10 @@ def create_masterfile(path, output_path):
                 
                 # Save every 50000 reviews
                 all_reviews.append(review_dict)
-                i = 0
+                
                 if len(all_reviews) % 50000 == 0:
                     reviews_df = pd.DataFrame(all_reviews)
-                    reviews_df.to_csv(output_path + 'english_glassdoor_reviews_' + str(i) + '.pt')
+                    torch.save(reviews_df, output_path + 'english_glassdoor_reviews_' + str(i) + '.pt')
                     all_reviews = []
                     i += 1
                     print(f'{str(i * 50000)} English reviews saved so far!')
@@ -64,11 +68,17 @@ def create_masterfile(path, output_path):
         
         # Save remaining reviews
         reviews_df = pd.DataFrame(all_reviews)
-        reviews_df.to_csv(output_path + 'english_glassdoor_reviews_' + str(i) + '.pt')
+        torch.save(reviews_df, output_path + 'english_glassdoor_reviews_' + str(i) + '.pt')
         all_reviews = []
-        print(f'{str(i * 50000 + len(all_reviews))} English reviews saved so far!')
+        print(f'{str(len(all_reviews))} English reviews saved so far!')
         print(f' *** For {company}, {not_english_reviews[company]} number of reviews were not in English')
         print('\n')
-    pd.DataFrame.from_dict(not_english_reviews, orient='index').to_csv(output_path + 'not_english_glassdoor_reviews.pt')
+    not_english_df = pd.DataFrame.from_dict(not_english_reviews, orient='index')
+    not_english_df.columns = ['non_english_reviews_number']
+    torch.save(not_english_df, output_path + 'not_english_glassdoor_reviews.pt')
     print('DONE, all master files created')
     
+
+if __name__ == "__main__":
+    create_masterfile('./Desktop/glassdoor_aspect_based_sentiment_analysis/scraped_data/2008 to 2018 SnP 500 Firm Data All/',
+                      './Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/')
