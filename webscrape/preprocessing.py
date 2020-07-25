@@ -32,8 +32,12 @@ def create_masterfile(path, output_path):
         
         for review_dict in reviews_dict:
             
-            # Check if a review is written in English
-            all_type = [t for t in ['summary', 'pros', 'cons', 'advice'] if review_dict[t] is not None]
+            # Fix Nonetype error
+            all_type = ['summary', 'pros', 'cons', 'advice']
+            for t in all_type:
+                if review_dict[t] is None:
+                    review_dict[t] = ''
+            #all_type = [t for t in ['summary', 'pros', 'cons', 'advice'] if review_dict[t] is not None]
             length_text = [len(review_dict[t]) for t in all_type]
             idx = length_text.index(max(length_text))
             text = review_dict[all_type[idx]].replace('\n', '')
@@ -48,17 +52,31 @@ def create_masterfile(path, output_path):
                 review_dict['locationType'] = review_dict['Location']['locationType']
                 review_dict['locationName'] = review_dict['Location']['locationName']
             # Fix employer responses
-            review_dict['employerResponses'] = ' linebreakanotherresponse '.join(review_dict['employerResponses'])
+            if review_dict['employerResponses'] == []:
+                review_dict['employerResponse'] = ''
+                review_dict['employerJobTitle'] = ''
+                review_dict['employerResponseDateTime'] = ''
+            else:
+                # Fix ast error
+                review_dict['employerResponses'] = review_dict['employerResponses'].replace("responseDateTime({\\\"format\\\":\\\"ISO\\\"})", "responseDateTime")
+                review_dict['employerResponses'] = json.loads(review_dict['employerResponses'])
+                review_dict['employerResponse'] = review_dict['employerResponses']['response']
+                review_dict['employerJobTitle'] = review_dict['employerResponses']['userJobTitle']
+                review_dict['employerResponseDateTime'] = review_dict['employerResponses']['responseDateTime']
+                
             # Delete the old unnecessary key:value pairs
-            del review_dict['employer'], review_dict['Location']
+            del review_dict['employer']
+            del review_dict['Location']
+            del review_dict['employerResponses']
             
-            # Check if the review is in English or not
+            # Check if a review is written in English
             if is_english(text) is True:
                 all_reviews.append(review_dict)
                 count_number[company][0] += 1
             else:
                 not_english_reviews.append(review_dict)
                 count_number[company][1] += 1
+        
         print(f' *** For {company}, {count_number[company][0]} number of reviews were in English')
         print(f' *** For {company}, {count_number[company][1]} number of reviews were NOT in English')
         print('\n')
