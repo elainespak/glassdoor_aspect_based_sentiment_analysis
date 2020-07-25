@@ -19,15 +19,15 @@ def is_english(sentence):
 
 def create_masterfile(path, output_path):
     all_reviews = []
-    not_english_reviews = {}
-    i = 1
+    not_english_reviews = []
+    count_number = {}
     
     for file in os.listdir(path):
         f = json.load(open(path+file))
         reviews_dict = list(f.values())
         
         company = file.split('_individual_reviews_all.txt')[0]
-        not_english_reviews[company] = 0
+        count_number[company] = [0, 0]
         print(f'{company} starts! {len(reviews_dict)} reviews in raw data --------------------')
         
         for review_dict in reviews_dict:
@@ -37,46 +37,48 @@ def create_masterfile(path, output_path):
             length_text = [len(review_dict[t]) for t in all_type]
             idx = length_text.index(max(length_text))
             text = review_dict[all_type[idx]].replace('\n', '')
-            if is_english(text) is True:
-                
-                # Add company name
-                review_dict['company'] = company
-                # Fix location
-                if review_dict['Location'] == []:
-                    review_dict['locationType'] = ''
-                    review_dict['locationName'] = ''
-                else:
-                    review_dict['locationType'] = review_dict['Location']['locationType']
-                    review_dict['locationName'] = review_dict['Location']['locationName']
-                # Fix employer responses
-                review_dict['employerResponses'] = 'linebreakanotherresponse'.join(review_dict['employerResponses'])
-                # Delete the old unnecessary key:value pairs
-                del review_dict['employer'], review_dict['Location']
-                
-                # Save every 50000 reviews
-                all_reviews.append(review_dict)
-                
-                if len(all_reviews) % 50000 == 0:
-                    reviews_df = pd.DataFrame(all_reviews)
-                    torch.save(reviews_df, output_path + 'english_glassdoor_reviews_' + str(i) + '.pt')
-                    all_reviews = []
-                    i += 1
-                    print(f'{str(i * 50000)} English reviews saved so far!')
-                            
+            
+            # Add company name
+            review_dict['company'] = company
+            # Fix location
+            if review_dict['Location'] == []:
+                review_dict['locationType'] = ''
+                review_dict['locationName'] = ''
             else:
-                not_english_reviews[company] += 1
-        
-        # Save remaining reviews
-        reviews_df = pd.DataFrame(all_reviews)
-        torch.save(reviews_df, output_path + 'english_glassdoor_reviews_' + str(i) + '.pt')
-        all_reviews = []
-        print(f'{str(len(all_reviews))} English reviews saved so far!')
-        print(f' *** For {company}, {not_english_reviews[company]} number of reviews were not in English')
+                review_dict['locationType'] = review_dict['Location']['locationType']
+                review_dict['locationName'] = review_dict['Location']['locationName']
+            # Fix employer responses
+            review_dict['employerResponses'] = ' linebreakanotherresponse '.join(review_dict['employerResponses'])
+            # Delete the old unnecessary key:value pairs
+            del review_dict['employer'], review_dict['Location']
+            
+            # Check if the review is in English or not
+            if is_english(text) is True:
+                all_reviews.append(review_dict)
+                count_number[company][0] += 1
+            else:
+                not_english_reviews.append(review_dict)
+                count_number[company][1] += 1
+        print(f' *** For {company}, {count_number[company][0]} number of reviews were in English')
+        print(f' *** For {company}, {count_number[company][1]} number of reviews were NOT in English')
         print('\n')
-    not_english_df = pd.DataFrame.from_dict(not_english_reviews, orient='index')
-    not_english_df.columns = ['non_english_reviews_number']
-    torch.save(not_english_df, output_path + 'not_english_glassdoor_reviews.pt')
-    print('DONE, all master files created')
+    
+    # Save english reviews
+    reviews_df = pd.DataFrame(all_reviews)
+    torch.save(reviews_df, output_path + 'english_glassdoor_reviews.pt')
+    print(f'TOTAL ENGLISH REVIEWS: {len(reviews_df)}')
+    
+    # Save non-english reviews
+    not_english_reviews_df = pd.DataFrame(not_english_reviews)
+    torch.save(not_english_reviews_df, output_path + 'not_english_glassdoor_reviews.pt')
+    print(f'TOTAL NON-ENGLISH REVIEWS: {len(not_english_reviews_df)}')
+    
+    # Save their counts
+    count_number_df = pd.DataFrame.from_dict(count_number, orient='index')
+    count_number_df.columns = ['english_count', 'not_english_count']
+    torch.save(count_number_df, output_path + 'count_not_english_glassdoor_reviews.pt')
+    
+    print('DONE, all master files created!!')
     
 
 if __name__ == "__main__":
