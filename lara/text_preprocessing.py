@@ -110,33 +110,3 @@ def create_vocab(stemmed_sents):
     vocab_dict = dict(zip(vocab, range(len(vocab))))
     return vocab, vocab_dict
 
-
-if __name__ == "__main__":
-    
-    import string
-    maketrans = ''.maketrans
-    replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
-    
-    test = load_only_text(r'C:\Users\elain\Desktop\glassdoor_aspect_based_sentiment_analysis\sample_data\2008 to 2018 SnP 500 Firm Data_Master English Files\english_glassdoor_reviews_sample.pt')
-    tokenized_sentences = preprocess_word_tokenize(test, replace_punctuation)
-    
-    import pickle
-    with open (r'C:\Users\elain\Desktop\glassdoor_aspect_based_sentiment_analysis\sample_data\processed_sentences_sample.pkl', 'wb') as f:
-        pickle.dump(tokenized_sentences, f)
-    
-    import pickle
-    with open (r'C:\Users\elain\Desktop\glassdoor_aspect_based_sentiment_analysis\sample_data\processed_sentences_sample.pkl', 'rb') as f:
-        tokenized_sentences = pickle.load(f)
-        
-    b_model, t_model = make_ngrams_model(tokenized_sentences, 5, 100)
-    bigram_sentences, _ = make_ngrams(bigram_mod=b_model, trigram_mod=t_model, tokenized_sents=tokenized_sentences)
-    stemmed_sentences = stemming(bigram_sentences)
-    vocab, vocab_dict = create_vocab(stemmed_sentences)
-    
-    ### ------------------------------------ Check how frequent the bigrams are!
-    test = to_one_list(stemmed_sentences)
-    test_freq = FreqDist(test)
-    ok = sorted([(test_freq[k],k) for k,v in vocab_dict.items() if '_' in k], reverse=True)
-    print(ok[:15])
-    ### ------------------------------------------------------------------------
-    
