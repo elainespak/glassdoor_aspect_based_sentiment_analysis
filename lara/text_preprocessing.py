@@ -4,7 +4,6 @@ import re
 import nltk
 import torch
 import itertools
-import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from gensim.models.phrases import Phrases, Phraser
@@ -19,12 +18,13 @@ def to_one_list(lists):
     return list(itertools.chain.from_iterable(lists))
 
 
-def load_only_text(pt_file, text_type=['summary', 'pros', 'cons', 'advice'], company=False):
-    
+def load_only_text(pt_file, text_type=['summary','pros','cons','advice'], company=False):
+
     master = torch.load(pt_file)
     if company==False:
         pass
     else:
+        # if company is specified, filter for only that company's review data
         master = master[master['company']==company]
     
     # Combine all texts regardless of text_type
@@ -36,68 +36,72 @@ def load_only_text(pt_file, text_type=['summary', 'pros', 'cons', 'advice'], com
     return list(only_text['all'])
 
 
-def parse_all_reviews_to_sentence(raw_reviews, replace_punctuation):
+def preprocess_word_tokenize(raw_sentences, replace_punctuation):
     """
     ###  INPUT
-    # raw_reviews: list of raw sentences
+    # raw_sentences: list of raw sentences
     ###  OUTPUT
-    # processed_reviews: list of processed sentences
+    # tokenized_sentences: list of processed sentences
     """
-    count = len(raw_reviews)
-    processed_reviews = []
+    count = len(raw_sentences)
+    tokenized_sentences = []
     keep_track = 0
-    for raw in raw_reviews:
+    
+    for raw in raw_sentences:
+        
+        # Change for proper sentence tokenization
         raw = re.sub('\r\n|\n-|\n|\r','. ', raw)
         raw = re.sub(',\.+ ', ', ', raw)
         raw = re.sub('\.+ ', '. ', raw)
         raw = re.sub('&amp;', '&', raw)
         
+        # Sentence tokenization
         sentences = sent_tokenize(raw)
-        sentences = [sent for sent in sentences if len(sent) != 1]
+        #if keep_track % 50 == 0:
+        #    print('PROCESSED: ')
+        #    print(sentences)
         
-        if keep_track % 50 == 0:
-            print('PROCESSED: ')
-            print(sentences)
         # Lowercase, remove punctuations, remove stopwords
-        sent = []
-        for s in sentences:
-            s = s.lower()
-            s = s.translate(replace_punctuation)
-            s = [w for w in word_tokenize(s) if not w in stopwords.words('english')]
-            sent.append(s)
-        processed_reviews.extend(sent)
+        temp = []
+        for sent in sentences:
+            sent = sent.lower()
+            sent = sent.translate(replace_punctuation)
+            sent = [w for w in word_tokenize(sent) if w not in stopwords.words('english') and w != []]
+            temp.append(sent)
+        tokenized_sentences.extend(temp)
         keep_track += 1
-        if keep_track % 30000 == 0:
+        if keep_track % 10000 == 0:
             print(f'{keep_track}/{count} done!')
-    return processed_reviews
+            print(temp)
+    return tokenized_sentences
 
 
-def make_ngrams_model(tokenized_sents, set_min_count=5, set_threshold=20):
-    bigram = Phrases(tokenized_sents, min_count=set_min_count, threshold=set_threshold)
-    trigram = Phrases(bigram[tokenized_sents], threshold=set_threshold)
+def make_ngrams_model(tokenized_sentences, set_min_count=5, set_threshold=100):
+    bigram = Phrases(tokenized_sentences, min_count=set_min_count, threshold=set_threshold)
+    trigram = Phrases(bigram[tokenized_sentences], threshold=set_threshold)
     bigram_mod = Phraser(bigram)
     trigram_mod = Phraser(trigram)
     return bigram_mod, trigram_mod
 
 
 def make_ngrams(bigram_mod, trigram_mod, tokenized_sents):
-    b = [bigram_mod[sent] for sent in tokenized_sents]
-    t = [trigram_mod[bigram_mod[sent]] for sent in tokenized_sents]
-    return b, t
+    bigram_sents = [bigram_mod[sent] for sent in tokenized_sents]
+    trigram_sents = [trigram_mod[bigram_mod[sent]] for sent in tokenized_sents]
+    return bigram_sents, trigram_sents
 
 
-def stemming(tokenized_sents):
-    sentences = []
-    for sent in tokenized_sents:
+def stemming(ngram_sents):
+    stemmed_sents = []
+    for sent in ngram_sents:
         stemmed = [stemmer.stem(w) for w in sent]
         if len(stemmed)>0:
-            sentences.append(stemmed)
-    return sentences
+            stemmed_sents.append(stemmed)
+    return stemmed_sents
 
 
-def create_vocab(sent):
+def create_vocab(stemmed_sents):
     # Gather every word from every sentence into one list
-    words = to_one_list(sent)
+    words = to_one_list(stemmed_sents)
     # Count occurrence of every word
     freq = FreqDist(words)
     # Create the official "vocab" with only frequent words
@@ -113,7 +117,26 @@ if __name__ == "__main__":
     maketrans = ''.maketrans
     replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
     
-    test = load_only_text(r'C:\Users\elain\Desktop\glassdoor_aspect_based_sentiment_analysis\sample_data\2008 to 2018 SnP 500 Firm Data_Master English Files\english_glassdoor_reviews.pt')
-    test2 = test[:20000]
-    test3 = parse_all_reviews_to_sentence(test2, replace_punctuation)
+    test = load_only_text(r'C:\Users\elain\Desktop\glassdoor_aspect_based_sentiment_analysis\sample_data\2008 to 2018 SnP 500 Firm Data_Master English Files\english_glassdoor_reviews_sample.pt')
+    tokenized_sentences = preprocess_word_tokenize(test, replace_punctuation)
+    
+    import pickle
+    with open (r'C:\Users\elain\Desktop\glassdoor_aspect_based_sentiment_analysis\sample_data\processed_sentences_sample.pkl', 'wb') as f:
+        pickle.dump(tokenized_sentences, f)
+    
+    import pickle
+    with open (r'C:\Users\elain\Desktop\glassdoor_aspect_based_sentiment_analysis\sample_data\processed_sentences_sample.pkl', 'rb') as f:
+        tokenized_sentences = pickle.load(f)
+        
+    b_model, t_model = make_ngrams_model(tokenized_sentences, 5, 100)
+    bigram_sentences, _ = make_ngrams(bigram_mod=b_model, trigram_mod=t_model, tokenized_sents=tokenized_sentences)
+    stemmed_sentences = stemming(bigram_sentences)
+    vocab, vocab_dict = create_vocab(stemmed_sentences)
+    
+    ### ------------------------------------ Check how frequent the bigrams are!
+    test = to_one_list(stemmed_sentences)
+    test_freq = FreqDist(test)
+    ok = sorted([(test_freq[k],k) for k,v in vocab_dict.items() if '_' in k], reverse=True)
+    print(ok[:15])
+    ### ------------------------------------------------------------------------
     

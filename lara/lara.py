@@ -1,44 +1,74 @@
 # -*- coding: utf-8 -*-
 
-import os
+import torch
 import pickle
 import string
-from tqdm import tqdm
 from nltk import FreqDist
 from text_preprocessing import *
 from aspect_augmentation import *
+
 maketrans = ''.maketrans
+replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
+
+
+def main(path, input_file, text_type=['summary', 'pros', 'cons', 'advice']):
+    
+    raw_text = load_only_text(path + input_file,
+                              text_type=['summary','pros','cons','advice'],
+                              company=False)
+    
+    tokenized_sentences = preprocess_word_tokenize(raw_text, replace_punctuation)
+    torch.save(tokenized_sentences, path + 'english_glassdoor_reviews_preprocessed_sentences.pt')
+    del raw_text
+    print('--------------------------- Finished preprocessing and tokenizing sentences into words -')
+    
+    # Create bigram and trigram models and process sentences with them
+    b_model, t_model = make_ngrams_model(tokenized_sentences, 5, 100)
+    bigram_sentences, trigram_sentences = make_ngrams(bigram_mod=b_model,
+                                                      trigram_mod=t_model,
+                                                      tokenized_sents=tokenized_sentences)
+    torch.save(bigram_sentences, path + 'english_glassdoor_reviews_english_bigram_sentences.pt')
+    torch.save(bigram_sentences, path + 'english_glassdoor_reviews_english_triigram_sentences.pt')
+    print('--------------------------- Finished applying n-grams to the tokenized sentences -------')
+    
+    stemmed_sentences = stemming(bigram_sentences)
+    torch.save(stemmed_sentences, path + 'english_glassdoor_reviews_english_stemmed_sentences.pt')
+    print('--------------------------- Finished stemming ------------------------------------------')
+    
+    # Create vocabs list and vocabs dictionary
+    vocab, vocab_dict = create_vocab(stemmed_sentences)
+    torch.save(vocab, path + 'english_glassdoor_reviews_english_vocab.pt')
+    torch.save(vocab, path + 'english_glassdoor_reviews_english_vocab_dict.pt')
+    print('--------------------------- Finished saving vocabs -------------------------------------')
 
 
 if __name__ == "__main__":
     
+    main('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/',
+         'english_glassdoor_reviews.pt')
+    """
+    ### ------------------------------------ Check how frequent the bigrams are!
+    test = to_one_list(only_sent)
+    test_freq = FreqDist(test)
+    ok = sorted([(test_freq[k],k) for k,v in vocab_dict.items() if '_' in k], reverse=True)
+    print(ok[:15])
+    ### ------------------------------------------------------------------------
+    
+    
+    
     
     ## == 0. Setup =================================================================
     
-    path = '../sample_data/2008 to 2018 SnP 500 Firm Data All/'
-    output_path = '../sample_output/lara/'
+    reviews_path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews.pt'
+    output_path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/'
     text_type = ['summary', 'pros', 'cons', 'advice']
+    
     
     
     ## == 1. Create VocabDict ======================================================
     
-    all_reviews = []
-    company_list = []
-    for file in tqdm(os.listdir(path)):
-        temp_reviews = load_file(path+file, text=text_type)
-        print(f'{file} successfully loaded')
-        company_name = file.split('_individual_reviews')[0]
-        company_name = company_name.replace('_', ' ')
-        company_list.append(company_name)
-        for r in temp_reviews:
-            all_reviews.append(r)
-    ### Save ###
-    with open('../sample_output/lara/raw_english_sentences.pkl', 'wb') as f:
-        pickle.dump(all_reviews, f)
-    print('--------------------------- Finished loading all files -----------')
-    
     replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
-    all_review_processed, all_only_sent = parse_all_reviews_to_sentence(all_reviews, replace_punctuation)
+    all_review_processed, all_only_sent = preprocess_word_tokenize(all_reviews, replace_punctuation)
     ### Save ###
     with open('../sample_output/lara/processed_english_sentences.pkl', 'wb') as f:
         pickle.dump(all_only_sent, f)
@@ -120,3 +150,5 @@ if __name__ == "__main__":
     
     # W matrix for reviews per company
     produce_data_for_rating(analyzer, data, output_path, percompany=True)
+    
+    """
