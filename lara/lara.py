@@ -13,6 +13,8 @@ replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
 
 def main(path, input_file, text_type=['summary', 'pros', 'cons', 'advice']):
     
+    """ Create all vocabs from all review text """
+    
     raw_text = load_only_text(path + input_file,
                               text_type=['summary','pros','cons','advice'],
                               company=False)
@@ -33,6 +35,7 @@ def main(path, input_file, text_type=['summary', 'pros', 'cons', 'advice']):
     
     stemmed_sentences = stemming(bigram_sentences)
     torch.save(stemmed_sentences, path + 'english_glassdoor_reviews_english_stemmed_sentences.pt')
+    del bigram_sentences, trigram_sentences
     print('--------------------------- Finished stemming ------------------------------------------')
     
     # Create vocabs list and vocabs dictionary
@@ -40,70 +43,17 @@ def main(path, input_file, text_type=['summary', 'pros', 'cons', 'advice']):
     torch.save(vocab, path + 'english_glassdoor_reviews_english_vocab.pt')
     torch.save(vocab, path + 'english_glassdoor_reviews_english_vocab_dict.pt')
     print('--------------------------- Finished saving vocabs -------------------------------------')
+    
+    
+    
 
 
 if __name__ == "__main__":
     
-    main('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/',
-         'english_glassdoor_reviews.pt')
-    """
-    ### ------------------------------------ Check how frequent the bigrams are!
-    test = to_one_list(only_sent)
-    test_freq = FreqDist(test)
-    ok = sorted([(test_freq[k],k) for k,v in vocab_dict.items() if '_' in k], reverse=True)
-    print(ok[:15])
-    ### ------------------------------------------------------------------------
-    
-    
-    
-    
-    ## == 0. Setup =================================================================
-    
-    reviews_path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews.pt'
-    output_path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/'
-    text_type = ['summary', 'pros', 'cons', 'advice']
-    
-    
-    
-    ## == 1. Create VocabDict ======================================================
-    
-    replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
-    all_review_processed, all_only_sent = preprocess_word_tokenize(all_reviews, replace_punctuation)
-    ### Save ###
-    with open('../sample_output/lara/processed_english_sentences.pkl', 'wb') as f:
-        pickle.dump(all_only_sent, f)
-    with open('../sample_output/lara/processed_english_sentences_per_review.pkl', 'wb') as f:
-        pickle.dump(all_review_processed, f)
-    print('--------------------------- Finished parsing reviews to sentences -')
-    
-    # Create bigram and trigram models and process sentences with them
-    b_model, t_model = make_ngrams_model(all_only_sent, 5, 20)
-    all_only_sent, _ = make_ngrams(bigram_mod=b_model, trigram_mod=t_model, tokenized_sents=all_only_sent)
-    ### Save ###
-    with open('../sample_output/lara/processed_english_sentences.pkl', 'wb') as f:
-        pickle.dump(all_only_sent, f)
-    print('--------------------------- Finished creating n grams ------------')
-    
-    # Stemming
-    only_sent = stemming(all_only_sent)
-    print('--------------------------- Finished stemming --------------------')
-    
-    # Create vocabs list and vocabs dictionary
-    vocab, vocab_dict = create_vocab(only_sent)
-    ### Save ###
-    with open('../sample_output/lara/vocab.pkl', 'wb') as f:
-        pickle.dump(vocab, f)
-    with open('../sample_output/lara/vocab_dict.pkl', 'wb') as f:
-        pickle.dump(vocab_dict, f)
-    print('--------------------------- Finished creating vocab & vocab dict -')
-    
-    ### ------------------------------------ Check how frequent the bigrams are!
-    test = to_one_list(only_sent)
-    test_freq = FreqDist(test)
-    ok = sorted([(test_freq[k],k) for k,v in vocab_dict.items() if '_' in k], reverse=True)
-    print(ok[:15])
-    ### ------------------------------------------------------------------------
-    
+    main(path='../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/',
+         input_file='english_glassdoor_reviews.pt',
+         text_type=['summary', 'pros', 'cons', 'advice'])
+    """   
     
     ## == 2. Select keywords per aspect ============================================
     
