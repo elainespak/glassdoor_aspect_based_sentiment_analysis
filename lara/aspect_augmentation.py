@@ -11,112 +11,73 @@ from nltk import sent_tokenize, word_tokenize, FreqDist
 stemmer = PorterStemmer()
 
 
-def load_review_file(path, company_name, text='pros'):
-    filename = company_name.replace(' ', '_')+'_individual_reviews_all.txt'
-    file_name = path + filename
-    reviews = json.load(open(file_name)).values()
-    final_reviews = []
-    if type(text) != list:
-        for r in reviews:
-            if langid.classify(r.get(text))[0]=='en':
-                final_reviews.append(r)
-    else:
-        for r in reviews:
-            try:
-                is_all_english = [langid.classify(r.get(t))[0] for t in text]
-                if list(set(is_all_english)) == ['en']:
-                    final_reviews.append(r)
-                else:
-                    pass # Not all review parts are in English
-            except:
-                pass
-    return final_reviews
-
-
-def label_sentence_UseVocab(only_sentences, VocabDict):
+def label_sentence_UseVocab(final_sentences, VocabDict):
     '''
     Label every word of a sentence by using:
     1) a corresponding number from the VocabDict (vocabulary lookup table)
+        (e.g., '-Amazing people' --> [0, 1]) which really means ['amaz', 'peopl'])
         OR
-    2) "None" label
-    
+    2) "None" label (TODO)
     '''
-    num_sent = []
-    for sent in only_sentences:
-        temp = [VocabDict.get(w) for w in sent]
+    vocabdict_labeled_sentences = []
+    for sentence in final_sentences:
+        temp = [VocabDict[word] for word in sentence]
         if len(temp)>0:
-            num_sent.append(temp)
-    return num_sent
+            vocabdict_labeled_sentences.append(temp)
+    return vocabdict_labeled_sentences
 
 
 class Sentence_info:
-    def __init__(self, sent):
+    def __init__(self, vocabdict_labeled_sentence):
         '''
         ###  INPUT
-        # sent: num_sent (e.g., '-Amazing people' --> [0, 1]) ###['amaz', 'peopl'])
+        # sent: vocabdict_labeled_sentence (e.g., '-Amazing people' --> [0, 1]) which really means ['amaz', 'peopl'])
         
         ###  DEFINED
         # word_frequency: occurrence count of each word in sent 
         # unique_count: count of unique words in sent   < ---- 안쓰임!!!!! 대체 뭐
         # label: initially, set to -1
         '''
-        self.word_frequency = FreqDist(sent)
+        self.word_frequency = FreqDist(vocabdict_labeled_sentence)
         self.unique_word_count = len(self.word_frequency)
         self.aspect_label = -1
 
 
 class Review:
-    def __init__(self, review_data, VocabDict):
+    def __init__(self, review_text, VocabDict, text_type):
         '''
         ###  INPUT
-        # review_data: each individual review
+        # review_text: review text
         # VocabDict: vocabulary lookup table
-        
-        ###  DEFINED
-        # Overall: overall rating
-        # Sentence_class: class Sentences
-        # 
         '''
-        self.Overall = review_data.get("ratingOverall")
-        # self.WorkLifeBalance = review_data.get("ratingWorkLifeBalance")
-        self.reviewId= review_data.get("reviewId")
-        # Text
-        if type(text_type) != list:
-            self.reviewText = review_data.get(text_type)
-        else:
-            text_concat = []
-            for t in text_type:
-                text_concat.append(review_data.get(t))
-            self.reviewText = '. '.join(text_concat)
-        #self.only_sents = parse_to_sentence(self.reviewText) # original
-        temp_sents = parse_to_sentence(self.reviewText) # new
-        temp_sents, t = make_ngrams(bigram_mod=b_mod, trigram_mod=t_mod, tokenized_sents = temp_sents) # new
-        self.only_sents = stemming(temp_sents) # new
+        tokenized_sentences = preprocess_word_tokenize(review_text, replace_punctuation)
+        bigram_sentences, _ = make_ngrams(b_model, t_model, tokenized_sentences) # Todo: make it possible to choose bi- or tri-
+        stemmed_sentences = stemming(bigram_sentences)
         
-        num_sents = label_sentence_UseVocab(self.only_sents, VocabDict)
+        vocabdict_labeled_sentences = label_sentence_UseVocab(stemmed_sentences, VocabDict)
         
-        self.Sentences_info = [Sentence_info(num_sent) for num_sent in num_sents]
-        UniWord = {}
+        self.Sentences_info = [Sentence_info(sent) for sent in vocabdict_labeled_sentences]
+        UniWord = {} # dictionary
         for sent in self.Sentences_info:
-            UniWord = UniWord | sent.word_frequency.keys()
-        UniWord = {-1 if w == None else w for w in UniWord}
+            UniWord = UniWord | sent.word_frequency.keys() # now, UniWord is a set
+        #UniWord = {-1 if w == None else w for w in UniWord}
+        
         self.UniWord = np.array([w for w in UniWord])
         self.UniWord.sort()
         self.NumOfUniWord = len(self.UniWord)
 
 
 class Company:
-    def __init__(self, company_name, VocabDict):
+    def __init__(self, path, company_name, VocabDict, text_type):
         '''
         ###  INPUT
         # company_name: company name
                         e.g., 'XYZ International Inc.'
         # company_data: json file itself
         '''
-        #self.Company = re.match('.*?(?=_individual_reviews_all.txt)', company_json)
-        #self.Reviews = [Review(review, VocabDict) for review in company_data.get("Reviews")]
+        self.path = path
         self.Company = company_name
-        self.Reviews = [Review(review, VocabDict) for review in load_review_file(path, self.Company, text)]
+        self.Reviews = [Review(review, VocabDict, text_type) for review in load_only_text(self.path, self.Company, self.text_type)]
         self.NumOfReviews = len(self.Reviews)
 
 
@@ -139,18 +100,19 @@ def sent_aspect_match(Sentences_info, aspects, K):
 
 
 class Corpus:
-    def __init__(self, corpus, Vocab, VocabDict):
+    def __init__(self, corpus, Vocab, VocabDict, text_type):
         '''
         ###  INPUT
         # corpus: list of all companies
-        # Vocab: all Vocab??????????
+        # Vocab: all Vocab
         # Count: 
         '''
+        self.text_type = text_type
         self.Vocab = Vocab
         self.VocabDict = VocabDict
         self.V = len(Vocab)
         self.Aspect_Terms = []
-        self.Companies = [Company(company_name, self.VocabDict) for company_name in corpus] # rest = one restaurant
+        self.Companies = [Company(company_name, self.VocabDict, self.text_type) for company_name in corpus]
         self.NumOfCompanies = len(corpus)
 
 
@@ -247,7 +209,7 @@ class Bootstrapping:
         else:
             print("Warning: No aspects were pre-specified")
 
-def load_Aspect_Terms(analyzer,filepath,VocabDict):
+def load_Aspect_Terms(analyzer, filepath, VocabDict):
     '''
     # analyzer:    
     # filepath: path where the aspect seedwords text file is located
@@ -325,20 +287,19 @@ def create_all_W(analyzer,corpus):
         company_num += 1
 
 
-def produce_data_for_rating(analyzer,corpus,outputfolderpath,percompany=False):
+def produce_data_for_rating(analyzer, corpus, outputfolderpath, percompany=False):
     dir = outputfolderpath
     if not os.path.exists(dir):
         os.makedirs(dir)
 
-    vocabfile = outputfolderpath / "vocab.txt"
+    vocabfile = outputfolderpath + "vocab.txt"
     f = open(vocabfile,"w",encoding='UTF-8')
     for w in corpus.Vocab:
         f.write(w+",")
     f.close()
     
-    vocabdictfile = outputfolderpath / "vocab_dict.txt"
-    f = open(vocabdictfile,"w",encoding='UTF-8')
-    with open(vocabdictfile,"w",encoding='utf-8') as f:
+    vocabdictfile = outputfolderpath + "vocab_dict.txt"
+    with open(vocabdictfile,"w",encoding='utf8') as f:
         json.dump(corpus.VocabDict, f)
     '''
     json.dumps(corpus.VocabDict)
@@ -349,8 +310,8 @@ def produce_data_for_rating(analyzer,corpus,outputfolderpath,percompany=False):
     f.close()
     
     if percompany==False:
-        reviewfile = outputfolderpath / "review_data_all.txt"
-        f = open(reviewfile, 'w',encoding='UTF-8')
+        reviewfile = outputfolderpath + "review_data_all.txt"
+        f = open(reviewfile, 'w', encoding='utf8')
         for company in corpus.Companies:
             for review in company.Reviews:
                 f.write(str(review.reviewId))
@@ -365,8 +326,8 @@ def produce_data_for_rating(analyzer,corpus,outputfolderpath,percompany=False):
         f.close()
         
     else:
-        reviewfile = outputfolderpath / "review_data.txt"
-        f = open(reviewfile, 'w',encoding='UTF-8')
+        reviewfile = outputfolderpath + "review_data.txt"
+        f = open(reviewfile, 'w', encoding='utf8')
         for company in corpus.Companies:
             f.write(company.Company)
             f.write("\nTotal number of reviews: " + str(company.NumOfReviews))
