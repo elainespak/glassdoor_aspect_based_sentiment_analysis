@@ -18,14 +18,15 @@ def to_one_list(lists):
     return list(itertools.chain.from_iterable(lists))
 
 
-def load_only_text(pt_file, text_type=['summary','pros','cons','advice'], company=False):
+def load_only_text(df_file, text_type, company=False):
 
-    master = torch.load(pt_file)
+    master = torch.load(df_file)
     if company==False:
         pass
     else:
         # if company is specified, filter for only that company's review data
         master = master[master['company']==company]
+        print(f'{company} text loaded!')
     
     # Combine all texts regardless of text_type
     only_text = master[text_type]
@@ -66,13 +67,14 @@ def preprocess_word_tokenize(raw_sentences, replace_punctuation):
         for sent in sentences:
             sent = sent.lower()
             sent = sent.translate(replace_punctuation)
-            sent = [w for w in word_tokenize(sent) if w not in stopwords.words('english') and w != []]
+            sent = [w for w in word_tokenize(sent) if w not in stopwords.words('english') and w != '']
             temp.append(sent)
-        tokenized_sentences.extend(temp)
-        keep_track += 1
-        if keep_track % 10000 == 0:
-            print(f'{keep_track}/{count} done!')
-            print(temp)
+        if len(temp) != 0:
+            tokenized_sentences.extend(temp)
+            keep_track += 1
+            if keep_track % 10000 == 0:
+                print(f'{keep_track}/{count} done!')
+                print(temp)
     return tokenized_sentences
 
 

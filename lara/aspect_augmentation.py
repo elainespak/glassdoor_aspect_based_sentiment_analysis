@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
+
 import os
-import json
 import math
 import numpy as np
 from nltk import FreqDist
@@ -21,7 +21,7 @@ def label_sentence_UseVocab(final_sentences, VocabDict):
     '''
     vocabdict_labeled_sentences = []
     for sentence in final_sentences:
-        temp = [VocabDict[word] for word in sentence]
+        temp = [VocabDict[word] for word in sentence if word in VocabDict.keys()]
         if len(temp)>0:
             vocabdict_labeled_sentences.append(temp)
     return vocabdict_labeled_sentences
@@ -72,16 +72,18 @@ class Company:
         ###  INPUT
         # company_name: company name ( e.g., 'XYZ International Inc.' )
         '''
-        self.Reviews = [Review(text, VocabDict, text_type) for text in load_only_text(path, company_name, text_type)]
+        
+        self.Reviews = [Review(text, VocabDict, text_type) for text in load_only_text(path, text_type, company=company_name)]
         self.NumOfReviews = len(self.Reviews)
 
 
 class Corpus:
-    def __init__(self, path, corpus, Vocab, VocabDict, text_type):
+    def __init__(self, path, corpus, Vocab, VocabDict, text_type=['summary','pros','cons','advice']):
         '''
         ###  INPUT
         # corpus: list of all companies
         '''
+        self.Vocab = Vocab
         self.Companies = [Company(path, company, VocabDict, text_type) for company in corpus]
         self.NumOfCompanies = len(corpus)
         self.VocabLength = len(Vocab)
@@ -104,7 +106,6 @@ def label_aspect(Sentence_info, aspects_num, K):
             if word_num in aspects_num[idx]:
                 match_count[idx] += word_num_count
     return match_count
-
 
 
 def ChisqTest(N, taDF, tDF, aDF):
@@ -133,7 +134,7 @@ def collect_stat_for_each_review(review, aspects, Vocab):
     '''
     # review.num_stn_aspect_word = np.zeros((len(aspect),len(Vocab)))
     K = len(aspects)
-    review.num_stn_aspect_word = np.zeros((K,review.NumOfUniWord))
+    review.num_stn_aspect_word = np.zeros((K, review.NumOfUniWord))
     review.num_stn_aspect = np.zeros(K)
     review.num_stn_word = np.zeros(review.NumOfUniWord)
     review.num_stn = 0
@@ -201,6 +202,7 @@ class Bootstrapping:
         else:
             print("Warning: No aspects were pre-specified")
 
+
 def load_Aspect_Terms(analyzer, seedwords_path, VocabDict):
     ''' 
     # seedwords_path: path where the aspect seedwords text file is located
@@ -213,7 +215,8 @@ def load_Aspect_Terms(analyzer, seedwords_path, VocabDict):
             analyzer.Aspect_Terms.append(aspect)
     print("---------------------------- Aspect Keywords loading completed! ---------")
 
-def Add_Aspect_Keywords(analyzer, p, NumIter, c):
+
+def Add_Aspect_Keywords(analyzer, p, NumIter, c, K):
     '''
     ###  INPUT
     # analyzer
@@ -222,8 +225,8 @@ def Add_Aspect_Keywords(analyzer, p, NumIter, c):
     # c: data
     '''
     for i in range(NumIter):
-        analyzer.sentence_label(c)
-        analyzer.calc_chi_sq(c)
+        analyzer.sentence_label(c, K)
+        analyzer.calc_chi_sq(c, K)
         t = 0
         for cs in analyzer.Chi_sq:
             x = cs[np.argsort(cs)[::-1]] # descending order
@@ -264,7 +267,7 @@ def create_W_matrix_for_each_review(analyzer, review, corpus):
         for w in range(Nd):  ## w is index of UniWord_for_review
             # z = review.UniWord[w]
             if corpus.all_num_stn_aspect[k] > 0:
-                review.W[k,w] = review.num_stn_aspect_word[k,w] / corpus.all_num_stn_aspect[k]
+                review.W[k, w] = review.num_stn_aspect_word[k, w] / corpus.all_num_stn_aspect[k]
 
 
 def create_all_W(analyzer, corpus):
@@ -276,59 +279,107 @@ def create_all_W(analyzer, corpus):
         company_num += 1
 
 
-def produce_data_for_rating(analyzer, corpus, outputfolderpath, percompany=False):
-    dir = outputfolderpath
-    if not os.path.exists(dir):
-        os.makedirs(dir)
+def produce_data_for_rating(analyzer, corpus, output_path, percompany=False):
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
-    vocabfile = outputfolderpath + "vocab.txt"
-    f = open(vocabfile,"w",encoding='UTF-8')
-    for w in corpus.Vocab:
-        f.write(w+",")
-    f.close()
+    vocabfile = output_path + "vocab.txt"
+    with open(vocabfile, 'w', encoding='utf8') as f:
+        for w in corpus.Vocab:
+            f.write(w+",")
     
-    vocabdictfile = outputfolderpath + "vocab_dict.txt"
-    with open(vocabdictfile,"w",encoding='utf8') as f:
-        json.dump(corpus.VocabDict, f)
-    '''
-    json.dumps(corpus.VocabDict)
-    for w in corpus.VocabDict.items():
-        f.write(w)
-        f.write("\n")
-    '''
-    f.close()
-    
-    if percompany==False:
-        reviewfile = outputfolderpath + "review_data_all.txt"
-        f = open(reviewfile, 'w', encoding='utf8')
-        for company in corpus.Companies:
-            for review in company.Reviews:
-                f.write(str(review.reviewId))
-                f.write(":")
-                f.write(str(review.Overall))
-                f.write(":")
-                f.write(str(review.UniWord.tolist()))
-                f.write(":")
-                f.write(str(review.W.tolist()))
+    if percompany == False:
+        reviewfile = output_path + "review_data_all.txt"
+        with open(reviewfile, 'w', encoding='utf8') as f:
+            for company in corpus.Companies:
+                for review in company.Reviews:
+                    f.write(str(review.reviewId))
+                    f.write(":")
+                    f.write(str(review.Overall))
+                    f.write(":")
+                    f.write(str(review.UniWord.tolist()))
+                    f.write(":")
+                    f.write(str(review.W.tolist()))
+                    f.write("\n")
                 f.write("\n")
-            f.write("\n")
-        f.close()
-        
     else:
-        reviewfile = outputfolderpath + "review_data.txt"
-        f = open(reviewfile, 'w', encoding='utf8')
-        for company in corpus.Companies:
-            f.write(company.Company)
-            f.write("\nTotal number of reviews: " + str(company.NumOfReviews))
-            f.write("\n")
-            for review in company.Reviews:
-                f.write(str(review.reviewId))
-                f.write(":")
-                f.write(str(review.Overall))
-                f.write(":")
-                f.write(str(review.UniWord.tolist()))
-                f.write(":")
-                f.write(str(review.W.tolist()))
+        reviewfile = output_path + "review_data.txt"
+        with open(reviewfile, 'w', encoding='utf8') as f:
+            for company in corpus.Companies:
+                f.write(company.Company)
+                f.write("\nTotal number of reviews: " + str(company.NumOfReviews))
                 f.write("\n")
-            f.write("\n")
-        f.close()
+                for review in company.Reviews:
+                    f.write(str(review.reviewId))
+                    f.write(":")
+                    f.write(str(review.Overall))
+                    f.write(":")
+                    f.write(str(review.UniWord.tolist()))
+                    f.write(":")
+                    f.write(str(review.W.tolist()))
+                    f.write("\n")
+                f.write("\n")
+        
+        
+if __name__ == "__main__":
+    import torch
+    import string
+    maketrans = ''.maketrans
+    replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
+    vocab = torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_english_vocab.pt')
+    vocab_dict = torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_english_vocab_dict.pt')
+    b_model =torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_english_bigram_model.pt')
+    t_model = torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_english_trigram_model.pt')
+    
+    # Create analyzer
+    analyzer = Bootstrapping()
+    
+    # Load aspect seedwords
+    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams.txt', vocab_dict)
+    for aspect_num in analyzer.Aspect_Terms:
+        print('-------- Aspect Seedwords:')
+        print(aspect_num)
+        print([vocab[num] for num in aspect_num])
+    
+    
+    # Define corpus (test with two companies)
+    path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews.pt'
+    company_list = ['3M_Co','Amazon.com_Inc']
+    data = Corpus(path, company_list, vocab, vocab_dict)
+    
+    # Labeling each sentence
+    K = len(analyzer.Aspect_Terms)
+    analyzer.sentence_label(data, K)
+    
+    # Calculate chi square
+    analyzer.calc_chi_sq(data, K) # it works! CHECK LATER to see if +0.00001 is justified
+    
+    # Update the aspect keywords list
+    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams.txt', vocab_dict)
+    Add_Aspect_Keywords(analyzer, p=5, NumIter=5, c=data, K=K)
+    
+    # Check final results
+    for aspect_num in analyzer.Aspect_Terms:
+        print('-------- Final Aspect terms:')
+        print(aspect_num)
+        print([vocab[w] for w in aspect_num])
+    
+    
+    # Save the aspect keywords
+    aspectfile = outputfolderpath / "aspect_final_words_bigrams_8.txt"
+    f = open(aspectfile, 'w',encoding='UTF-8')
+    
+    for aspect in analyzer.Aspect_Terms:
+        print('-------- Final Aspect terms:')
+        for w in aspect:
+            print(vocab[w])
+            f.write(vocab[w])
+            f.write(',')
+        f.write('\n')
+    f.close()
+
+    
+    
+    
+    
+    

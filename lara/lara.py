@@ -29,8 +29,10 @@ def main(path, input_file, text_type=['summary', 'pros', 'cons', 'advice']):
     bigram_sentences, trigram_sentences = make_ngrams(bigram_mod=b_model,
                                                       trigram_mod=t_model,
                                                       tokenized_sents=tokenized_sentences)
+    torch.save(b_model, path + 'english_glassdoor_reviews_english_bigram_model.pt')
+    torch.save(t_model, path + 'english_glassdoor_reviews_english_trigram_model.pt')
     torch.save(bigram_sentences, path + 'english_glassdoor_reviews_english_bigram_sentences.pt')
-    torch.save(bigram_sentences, path + 'english_glassdoor_reviews_english_triigram_sentences.pt')
+    torch.save(bigram_sentences, path + 'english_glassdoor_reviews_english_trigram_sentences.pt')
     print('--------------------------- Finished applying n-grams to the tokenized sentences -------')
     
     stemmed_sentences = stemming(bigram_sentences)
@@ -41,7 +43,7 @@ def main(path, input_file, text_type=['summary', 'pros', 'cons', 'advice']):
     # Create vocabs list and vocabs dictionary
     vocab, vocab_dict = create_vocab(stemmed_sentences)
     torch.save(vocab, path + 'english_glassdoor_reviews_english_vocab.pt')
-    torch.save(vocab, path + 'english_glassdoor_reviews_english_vocab_dict.pt')
+    torch.save(vocab_dict, path + 'english_glassdoor_reviews_english_vocab_dict.pt')
     print('--------------------------- Finished saving vocabs -------------------------------------')
     
     
@@ -53,6 +55,11 @@ if __name__ == "__main__":
     main(path='../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/',
          input_file='english_glassdoor_reviews.pt',
          text_type=['summary', 'pros', 'cons', 'advice'])
+    
+    ## == 2. Select keywords per aspect ============================================
+    
+    load_only_text(pt_file, text_type=['summary','pros','cons','advice'], company=''):
+    
     """   
     
     ## == 2. Select keywords per aspect ============================================
