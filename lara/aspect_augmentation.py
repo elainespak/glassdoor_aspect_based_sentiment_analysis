@@ -3,11 +3,11 @@
 import os
 import json
 import math
-import langid
 import numpy as np
+from nltk import FreqDist
 from text_preprocessing import *
 from nltk.stem.porter import PorterStemmer
-from nltk import sent_tokenize, word_tokenize, FreqDist
+
 stemmer = PorterStemmer()
 
 
@@ -31,15 +31,14 @@ class Sentence_info:
     def __init__(self, vocabdict_labeled_sentence):
         '''
         ###  INPUT
-        # sent: vocabdict_labeled_sentence (e.g., '-Amazing people' --> [0, 1]) which really means ['amaz', 'peopl'])
+        # sent: vocabdict_labeled_sentence
+          ( e.g., '-Amazing people' --> [0, 1]) which really means ['amaz', 'peopl'] )
         
         ###  DEFINED
-        # word_frequency: occurrence count of each word in sent 
-        # unique_count: count of unique words in sent   < ---- 안쓰임!!!!! 대체 뭐
+        # word_frequency: occurrence count of each word in sent
         # label: initially, set to -1
         '''
         self.word_frequency = FreqDist(vocabdict_labeled_sentence)
-        self.unique_word_count = len(self.word_frequency)
         self.aspect_label = -1
 
 
@@ -71,49 +70,41 @@ class Company:
     def __init__(self, path, company_name, VocabDict, text_type):
         '''
         ###  INPUT
-        # company_name: company name
-                        e.g., 'XYZ International Inc.'
-        # company_data: json file itself
+        # company_name: company name ( e.g., 'XYZ International Inc.' )
         '''
-        self.path = path
-        self.Company = company_name
-        self.Reviews = [Review(review, VocabDict, text_type) for review in load_only_text(self.path, self.Company, self.text_type)]
+        self.Reviews = [Review(text, VocabDict, text_type) for text in load_only_text(path, company_name, text_type)]
         self.NumOfReviews = len(self.Reviews)
 
 
-def sent_aspect_match(Sentences_info, aspects, K):
+class Corpus:
+    def __init__(self, path, corpus, Vocab, VocabDict, text_type):
+        '''
+        ###  INPUT
+        # corpus: list of all companies
+        '''
+        self.Companies = [Company(path, company, VocabDict, text_type) for company in corpus]
+        self.NumOfCompanies = len(corpus)
+        self.VocabLength = len(Vocab)
+        self.Aspect_Terms = []
+        
+        
+def label_aspect(Sentence_info, aspects_num, K):
     '''
     ###  INPUT
-    # aspects: list of list of aspects
-               e.g., [['pay','money','benefits'], ['coworkers','team','colleagues']]
-    # k: number of different aspects
+    # aspects_num: list of list of aspects
+                   ( e.g., [['pay','money','benefits'], ['coworkers','team','colleagues']] )
+    # K: number of different aspects
     
     ###  OUTPUT
     # match_count: k-dimensional vector representing the number of aspect words in the review
     '''
     match_count = np.zeros(K)
     for idx in range(K):
-        for word_num, word_num_count in Sentences_info.word_frequency.items():
-            if word_num in aspects[idx]:
+        for word_num, word_num_count in Sentence_info.word_frequency.items():
+            if word_num in aspects_num[idx]:
                 match_count[idx] += word_num_count
     return match_count
 
-
-class Corpus:
-    def __init__(self, corpus, Vocab, VocabDict, text_type):
-        '''
-        ###  INPUT
-        # corpus: list of all companies
-        # Vocab: all Vocab
-        # Count: 
-        '''
-        self.text_type = text_type
-        self.Vocab = Vocab
-        self.VocabDict = VocabDict
-        self.V = len(Vocab)
-        self.Aspect_Terms = []
-        self.Companies = [Company(company_name, self.VocabDict, self.text_type) for company_name in corpus]
-        self.NumOfCompanies = len(corpus)
 
 
 def ChisqTest(N, taDF, tDF, aDF):
@@ -123,7 +114,6 @@ def ChisqTest(N, taDF, tDF, aDF):
     # taDF: term in the aspect-labeled Document Frequency
     # tDF: term Document Frequency
     # aDF: aspect-labeled Document Frequency
-    Calculate Chi-Square
     '''
     A = taDF  ## term & aspect
     # A+B = tDF
@@ -133,12 +123,13 @@ def ChisqTest(N, taDF, tDF, aDF):
     return ((N * ( A * D - B * C )**2)) / ((aDF * ( B + D ) * tDF * ( C + D )) + 0.00001)
 
 
-def collect_stat_for_each_review(review,aspects,Vocab):
+def collect_stat_for_each_review(review, aspects, Vocab):
     '''
     ###  INPUT
     # review: each review
     # aspects: list of list of aspects
-               e.g., [['pay','money','benefits'], ['coworkers','team','colleagues']]
+               ( e.g., [[11, 48, 4], [4, 2, 29]], which represent
+               [['pay','money','benefits'], ['coworkers','team','colleagues']] )
     '''
     # review.num_stn_aspect_word = np.zeros((len(aspect),len(Vocab)))
     K = len(aspects)
@@ -148,7 +139,7 @@ def collect_stat_for_each_review(review,aspects,Vocab):
     review.num_stn = 0
     
     for Sentence in review.Sentences_info:
-        if Sentence.aspect_label != -1:   # if the sentence has an aspect label,
+        if Sentence.aspect_label != -1:  # if the sentence has an aspect label,
             review.num_stn += 1
             for l in Sentence.aspect_label:
                 review.num_stn_aspect[l] += 1
@@ -159,43 +150,44 @@ def collect_stat_for_each_review(review,aspects,Vocab):
                 for w,v in Sentence.word_frequency.items():#keys():
                     z = np.where(w == review.UniWord)[0] # index
                     review.num_stn_aspect_word[l,z] += v # FIX HERE???
-    return review.num_stn_aspect_word,review.num_stn_aspect,review.num_stn_word,review.num_stn
+    return review.num_stn_aspect_word, review.num_stn_aspect, review.num_stn_word, review.num_stn
 
     
 class Bootstrapping:
     
-    def sentence_label(self,corpus): # produce a label list
-        if len(self.Aspect_Terms)>0:
+    def sentence_label(self, corpus, K): # produce a label list
+        if 0 < K:
             for company in corpus.Companies:
-                for review in company.Reviews:
-                    for Sentence in review.Sentences_info:
-                        match_count=sent_aspect_match(Sentence,self.Aspect_Terms,len(self.Aspect_Terms))
-                        if np.max(match_count)>0: # if at least one of the aspects has a match
-                            s_label = np.where(np.max(match_count)==match_count)[0].tolist() # index of the aspect with max matched terms
-                            Sentence.aspect_label = s_label ### *** TO DO: with tie
+                for text in company.Reviews:
+                    for Sentence_info in text.Sentences_info:
+                        match_count = label_aspect(Sentence_info, self.Aspect_Terms, K)
+                        highest_match_count = np.max(match_count)
+                        if 0 < highest_match_count: # if at least one of the aspects has a match
+                            aspect_label = np.where(highest_match_count==match_count)[0].tolist() # index of the aspect with max matched terms
+                            Sentence_info.aspect_label = aspect_label # TODO: how about a tie?
                         else:
                             pass
         else:
             print("Warning: No sentences or Aspect_Terms are recorded in this corpus")
 
-    def calc_chi_sq(self,corpus):
-        K = len(self.Aspect_Terms)
-        V = len(corpus.Vocab)
+    def calc_chi_sq(self, corpus, K):
+        V = corpus.VocabLength
         corpus.all_num_stn_aspect_word = np.zeros((K,V))
         corpus.all_num_stn_aspect = np.zeros(K)
         corpus.all_num_stn_word = np.zeros(V)
         corpus.all_num_stn = 0
         Chi_sq = np.zeros((K,V))
-        if K>0:
+        
+        if 0 < K:
             for company in corpus.Companies:
-                for review in company.Reviews:
-                    review.num_stn_aspect_word,review.num_stn_aspect,review.num_stn_word,review.num_stn = collect_stat_for_each_review(review,self.Aspect_Terms,corpus.Vocab)
-                    corpus.all_num_stn += review.num_stn # total number of sentences with any aspect label
-                    corpus.all_num_stn_aspect += review.num_stn_aspect
-                    for w in review.UniWord:
-                        z = np.where(w == review.UniWord)[0][0] # index, since the matrix for review is small
-                        corpus.all_num_stn_word[w] += review.num_stn_word[z] # number of times aspect_i words (z) appear in all sentences
-                        corpus.all_num_stn_aspect_word[:,w] += review.num_stn_aspect_word[:,z]
+                for text in company.Reviews:
+                    text.num_stn_aspect_word, text.num_stn_aspect, text.num_stn_word, text.num_stn = collect_stat_for_each_review(text, self.Aspect_Terms, corpus.Vocab)
+                    corpus.all_num_stn += text.num_stn # total number of sentences with any aspect label
+                    corpus.all_num_stn_aspect += text.num_stn_aspect
+                    for w in text.UniWord:
+                        z = np.where(w == text.UniWord)[0][0] # index, since the matrix for review text is small
+                        corpus.all_num_stn_word[w] += text.num_stn_word[z] # number of times aspect_i words (z) appear in all sentences
+                        corpus.all_num_stn_aspect_word[:,w] += text.num_stn_aspect_word[:,z]
 
             for k in range(K):
                 for w in range(V):
@@ -209,19 +201,17 @@ class Bootstrapping:
         else:
             print("Warning: No aspects were pre-specified")
 
-def load_Aspect_Terms(analyzer, filepath, VocabDict):
-    '''
-    # analyzer:    
-    # filepath: path where the aspect seedwords text file is located
+def load_Aspect_Terms(analyzer, seedwords_path, VocabDict):
+    ''' 
+    # seedwords_path: path where the aspect seedwords text file is located
     # VocabDict: vocab lookup table
     '''    
     analyzer.Aspect_Terms=[]
-    f = open(filepath, "r")
-    for line in f:
-        aspect = [VocabDict.get(stemmer.stem(w.strip().lower())) for w in line.split(",")]
-        analyzer.Aspect_Terms.append(aspect)
-    f.close()
-    print("-------- Aspect Keywords loading completed!")
+    with open(seedwords_path, 'r') as f:
+        for line in f:
+            aspect = [VocabDict[stemmer.stem(w.strip().lower())] for w in line.split(',')]
+            analyzer.Aspect_Terms.append(aspect)
+    print("---------------------------- Aspect Keywords loading completed! ---------")
 
 def Add_Aspect_Keywords(analyzer, p, NumIter, c):
     '''
@@ -234,7 +224,7 @@ def Add_Aspect_Keywords(analyzer, p, NumIter, c):
     for i in range(NumIter):
         analyzer.sentence_label(c)
         analyzer.calc_chi_sq(c)
-        t=0
+        t = 0
         for cs in analyzer.Chi_sq:
             x = cs[np.argsort(cs)[::-1]] # descending order
             y = np.array([not math.isnan(v) for v in x]) # return T of F
@@ -246,44 +236,43 @@ def Add_Aspect_Keywords(analyzer, p, NumIter, c):
                     aspect_num += 1
                 if aspect_num > p:
                     break
-            t=t+1
-        print("complete iteration "+str(i+1)+"/"+str(NumIter))
+            t += 1
+        print(" *** Complete iteration "+str(i+1)+"/"+str(NumIter))
 
 
-def save_Aspect_Keywords_to_file(analyzer,filepath,Vocab):
+def save_Aspect_Keywords_to_file(analyzer, finalwords_path, Vocab):
     '''
     ###  INPUT
-    # filepath: path where the complete aspect words text file will locate
+    # finalwords_path: path where the complete aspect words text file will locate
     '''
-    f = open(filepath, 'w')
-    for aspect in analyzer.Aspect_Terms:
-        for w in aspect:
-            try:
-                f.write(Vocab[w]+", ")
-            except:
-                pass
-        f.write("\n\n\n")
-    f.close()
+    with open(finalwords_path, 'w') as f:
+        for aspect in analyzer.Aspect_Terms:
+            for w in aspect:
+                try:
+                    f.write(Vocab[w]+", ")
+                except:
+                    pass
+            f.write("\n\n\n")
+            
 
-
-def create_W_matrix_for_each_review(analyzer,review,corpus):
+def create_W_matrix_for_each_review(analyzer, review, corpus):
     Nd = len(review.UniWord)
-    K=len(analyzer.Aspect_Terms)
+    K = len(analyzer.Aspect_Terms)
     # V=len(corpus.Vocab)
-    review.W = np.zeros((K,Nd))
+    review.W = np.zeros((K, Nd))
     for k in range(K):
         for w in range(Nd):  ## w is index of UniWord_for_review
             # z = review.UniWord[w]
             if corpus.all_num_stn_aspect[k] > 0:
-                review.W[k,w] = review.num_stn_aspect_word[k,w]/corpus.all_num_stn_aspect[k]
+                review.W[k,w] = review.num_stn_aspect_word[k,w] / corpus.all_num_stn_aspect[k]
 
 
-def create_all_W(analyzer,corpus):
+def create_all_W(analyzer, corpus):
     company_num=0
     for company in corpus.Companies:
         print("Creating W matrix for company '"+str(company_num)+"': "+company.Company)
         for review in company.Reviews:
-            create_W_matrix_for_each_review(analyzer,review,corpus)
+            create_W_matrix_for_each_review(analyzer, review, corpus)
         company_num += 1
 
 
