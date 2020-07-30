@@ -25,4 +25,8 @@ Some of the text mining techniques that I have applied so far:
 1. Select only English reviews
    - Pre-trained FastText model (considered a SOTA for language identification as of July, 2020) (for Windows, best way to download is to get the appropriate wheel file at [this website](https://www.lfd.uci.edu/~gohlke/pythonlibs/#fasttext) and run `pip install ~wheelname~.whl`
    - Among 'summary,' 'pros,' 'cons,' and 'advice,' select the longest text. Check if the longest text is predicted as English or not. If yes, keep the review. If not, discard it.
-2. Remove stopwords, remove punctuations, all lower case, bi-gram, stemming
+2. Remove stopwords and punctuations
+3. Make every letter lower case
+4. Create bigrams and trigrams
+5. Apply stemming
+
