@@ -43,24 +43,18 @@ class Sentence_info:
 
 
 class Review:
-    def __init__(self, review_text, VocabDict, text_type):
+    def __init__(self, sentences, VocabDict, text_type):
         '''
         ###  INPUT
         # review_text: review text
         # VocabDict: vocabulary lookup table
         '''
-        tokenized_sentences = preprocess_word_tokenize(review_text, replace_punctuation)
-        bigram_sentences, _ = make_ngrams(b_model, t_model, tokenized_sentences) # Todo: make it possible to choose bi- or tri-
-        stemmed_sentences = stemming(bigram_sentences)
-        
-        vocabdict_labeled_sentences = label_sentence_UseVocab(stemmed_sentences, VocabDict)
-        
+        vocabdict_labeled_sentences = label_sentence_UseVocab(sentences, VocabDict)
         self.Sentences_info = [Sentence_info(sent) for sent in vocabdict_labeled_sentences]
         UniWord = {} # dictionary
         for sent in self.Sentences_info:
             UniWord = UniWord | sent.word_frequency.keys() # now, UniWord is a set
         #UniWord = {-1 if w == None else w for w in UniWord}
-        
         self.UniWord = np.array([w for w in UniWord])
         self.UniWord.sort()
         self.NumOfUniWord = len(self.UniWord)
@@ -72,8 +66,12 @@ class Company:
         ###  INPUT
         # company_name: company name ( e.g., 'XYZ International Inc.' )
         '''
+        review_text = load_only_text(path, text_type, company=company_name)
+        tokenized_sentences = preprocess_word_tokenize(review_text, replace_punctuation)
+        bigram_sentences, _ = make_ngrams(b_model, t_model, tokenized_sentences) # Todo: make it possible to choose bi- or tri-
+        stemmed_sentences = stemming(bigram_sentences)
         
-        self.Reviews = [Review(text, VocabDict, text_type) for text in load_only_text(path, text_type, company=company_name)]
+        self.Reviews = [Review(sent, VocabDict, text_type) for sent in stemmed_sentences]
         self.NumOfReviews = len(self.Reviews)
 
 
@@ -341,11 +339,12 @@ if __name__ == "__main__":
         print(aspect_num)
         print([vocab[num] for num in aspect_num])
     
-    
     # Define corpus (test with two companies)
     path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews.pt'
-    company_list = ['3M_Co','Amazon.com_Inc']
+    company_list = list(torch.load(path)['company'].unique())[:20]
     data = Corpus(path, company_list, vocab, vocab_dict)
+    
+    #torch.save(data, '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_corpus.pt')
     
     # Labeling each sentence
     K = len(analyzer.Aspect_Terms)

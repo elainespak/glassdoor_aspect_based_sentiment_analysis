@@ -68,17 +68,18 @@ def preprocess_word_tokenize(raw_sentences, replace_punctuation):
             sent = sent.lower()
             sent = sent.translate(replace_punctuation)
             sent = [w for w in word_tokenize(sent) if w not in stopwords.words('english') and w != '']
-            temp.append(sent)
+            if sent != []:
+                temp.append(sent)
         if len(temp) != 0:
             tokenized_sentences.extend(temp)
             keep_track += 1
-            if keep_track % 10000 == 0:
+            if keep_track % 3000 == 0:
                 print(f'{keep_track}/{count} done!')
                 print(temp)
     return tokenized_sentences
 
 
-def make_ngrams_model(tokenized_sentences, set_min_count=5, set_threshold=100):
+def make_ngrams_model(tokenized_sentences, set_min_count=50, set_threshold=100):
     bigram = Phrases(tokenized_sentences, min_count=set_min_count, threshold=set_threshold)
     trigram = Phrases(bigram[tokenized_sentences], threshold=set_threshold)
     bigram_mod = Phraser(bigram)
