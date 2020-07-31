@@ -3,13 +3,18 @@
 
 import os
 import math
+import torch
+import string
 import numpy as np
+import pandas as pd
 from nltk import FreqDist
 from text_preprocessing import *
 from nltk.stem.porter import PorterStemmer
 
 stemmer = PorterStemmer()
 pd.set_option('display.max_columns', 500)
+maketrans = ''.maketrans
+replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
 
 
 def label_sentence_UseVocab(final_sentences, VocabDict):
@@ -67,7 +72,7 @@ class Company:
         ###  INPUT
         # company_name: company name ( e.g., 'XYZ International Inc.' )
         '''
-        text_df =  master[master['company']==company_name][[t+'_bigram_stemmed' for t in text_type]]
+        text_df =  master[master['company']==company_name][[t+'_tokenized_bigram_stemmed' for t in text_type]]
         stemmed_sentences = []
         for col in text_df.columns:
             stemmed_sentences += list(text_df[col])
@@ -76,13 +81,13 @@ class Company:
 
 
 class Corpus:
-    def __init__(self, path, corpus, Vocab, VocabDict, text_type=['summary','pros','cons','advice']):
+    def __init__(self, master, corpus, Vocab, VocabDict, text_type=['summary','pros','cons','advice']):
         '''
         ###  INPUT
         # corpus: list of all companies
         '''
         self.Vocab = Vocab
-        self.Companies = [Company(path, company, VocabDict, text_type) for company in corpus]
+        self.Companies = [Company(master, company, VocabDict, text_type) for company in corpus]
         self.NumOfCompanies = len(corpus)
         self.VocabLength = len(Vocab)
         self.Aspect_Terms = []
@@ -320,42 +325,42 @@ def produce_data_for_rating(analyzer, corpus, output_path, percompany=False):
         
         
 if __name__ == "__main__":
-    import torch
-    import string
-    maketrans = ''.maketrans
-    replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
-    vocab = torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_english_vocab.pt')
-    vocab_dict = torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_english_vocab_dict.pt')
-    b_model =torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_english_bigram_model.pt')
-    t_model = torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_english_trigram_model.pt')
+    
+    # Call data
+    path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/'
+    vocab = torch.load(path + 'english_glassdoor_reviews_english_vocab.pt')
+    vocab_dict = torch.load(path + 'english_glassdoor_reviews_english_vocab_dict.pt')
+    b_model =torch.load(path + 'english_glassdoor_reviews_english_bigram_model.pt')
+    t_model = torch.load(path + 'english_glassdoor_reviews_english_trigram_model.pt')
     
     # Create analyzer
     analyzer = Bootstrapping()
     
     # Load aspect seedwords
-    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams.txt', vocab_dict)
+    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams_original.txt', vocab_dict)
     for aspect_num in analyzer.Aspect_Terms:
         print('-------- Aspect Seedwords:')
         print(aspect_num)
         print([vocab[num] for num in aspect_num])
     
-    # Define corpus (test with two companies)
-    path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews.pt'
-    company_list = list(torch.load(path)['company'].unique())[:20]
-    data = Corpus(path, company_list, vocab, vocab_dict)
-    
-    #torch.save(data, '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_corpus.pt')
+    # Define corpus
+    master = torch.load(+ 'english_glassdoor_reviews_text_preprocessed.pt')
+    company_list = list(master['company'].unique())
+    data = Corpus(master, company_list, vocab, vocab_dict)
+    print('-------- Done creating corpus')
     
     # Labeling each sentence
     K = len(analyzer.Aspect_Terms)
     analyzer.sentence_label(data, K)
+    print('-------- Done default labeling')
     
     # Calculate chi square
     analyzer.calc_chi_sq(data, K) # it works! CHECK LATER to see if +0.00001 is justified
+    print('-------- Done with chi-square')
     
     # Update the aspect keywords list
-    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams.txt', vocab_dict)
-    Add_Aspect_Keywords(analyzer, p=5, NumIter=5, c=data, K=K)
+    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams_original.txt', vocab_dict)
+    Add_Aspect_Keywords(analyzer, p=5, NumIter=7, c=data, K=K)
     
     # Check final results
     for aspect_num in analyzer.Aspect_Terms:
@@ -365,8 +370,8 @@ if __name__ == "__main__":
     
     
     # Save the aspect keywords
-    aspectfile = outputfolderpath / "aspect_final_words_bigrams_8.txt"
-    f = open(aspectfile, 'w',encoding='UTF-8')
+    aspectfile = path + 'aspect_final_words_bigrams_original.txt'
+    f = open(aspectfile, 'w', encoding='utf8')
     
     for aspect in analyzer.Aspect_Terms:
         print('-------- Final Aspect terms:')
@@ -377,7 +382,7 @@ if __name__ == "__main__":
         f.write('\n')
     f.close()
 
-    
+    """
     # Create W matrix for each review
     create_all_W(analyzer,data)
     
@@ -386,6 +391,6 @@ if __name__ == "__main__":
     
     # W matrix for reviews per company
     produce_data_for_rating(analyzer, data, output_path, percompany=True)
-    
+    """
     
     

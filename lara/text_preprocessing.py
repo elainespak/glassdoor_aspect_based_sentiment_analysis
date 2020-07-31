@@ -3,6 +3,7 @@
 import re
 import nltk
 import torch
+import string
 import itertools
 import pandas as pd
 from nltk.corpus import stopwords
@@ -13,6 +14,8 @@ from nltk import word_tokenize, sent_tokenize, FreqDist
 stemmer = PorterStemmer()
 nltk.download('stopwords')
 pd.set_option('display.max_columns', 500)
+maketrans = ''.maketrans
+replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
 
 
 def to_one_list(lists):
@@ -112,33 +115,30 @@ def create_vocab(stemmed_sents):
 
 
 if __name__ == "__main__":
-    import string
     
-    maketrans = ''.maketrans
-    replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
-    
-    path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/
-    master = torch.load(path + 'english_glassdoor_reviews.pt')
-    company_list = list(master['company'].unique())[:10]
+    # Parameters
+    path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/'
     text_list = ['summary','pros','cons','advice']
     
-    #master2 = master[:3000]
+    # Tokenize each review into sentence, and then into words
+    master = torch.load(path + 'english_glassdoor_reviews.pt')
     for text_type in text_list:
         raw_sentences = list(master[text_type])
         tokenized_sentences = preprocess_word_tokenize(raw_sentences, replace_punctuation)
         master[text_type+'_tokenized'] = pd.Series(tokenized_sentences)
-        
         print(f'{text_type} done!')
-
-
+    print('----------------------------------------------  Done with tokenization!')
+    
+    # Make bigram and trigram models
     all_tokenized_sentences = []
     for col in master:
         if col.endswith('_tokenized'):
             all_tokenized_sentences += list(master[col])
-    
     flat = [to_one_list(a) for a in all_tokenized_sentences]
     b_model, t_model = make_ngrams_model(flat, 25, 150)
+    print('---------------------------------------  Done with making n-gram model!')
     
+    # Turn words into bigrams and trigrams, and then stem them
     for col in master:
         if col.endswith('_tokenized'):
             temp = list(master[col])
@@ -147,27 +147,11 @@ if __name__ == "__main__":
             master[col+'_trigram'] = [n[1] for n in new]
             master[col+'_bigram_stemmed'] = [stemming(n[0]) for n in new]
             master[col+'_trigram_stemmed'] = [stemming(n[1]) for n in new]
-    print('Done with pre-processing')
-        
-            
+    print('-------------------------------------------  Done with ngram & stemming!')
     
-    
-    torch.save(b_model, path + 'english_glassdoor_reviews_bigram_model.pt')
-    torch.save(t_model, path + 'english_glassdoor_reviews_trigram_model.pt')
-    torch.save(bigram_sentences, path + 'english_glassdoor_reviews_bigram_sentences.pt')
-    torch.save(bigram_sentences, path + 'english_glassdoor_reviews_trigram_sentences.pt')
-    
-    for company in company_list:
-        temp = master[master['company']==company]
-        print(f'{company} text loaded!')
-        for text_type in text_list:
-            raw_sentences = list(temp[text_type])
-            tokenized_sentences = preprocess_word_tokenize(raw_sentences, replace_punctuation)
-            
-            
-    b_model, t_model = make_ngrams_model(tokenized_sentences, 5, 100)
-    bigram_sentences, trigram_sentences = make_ngrams(bigram_mod=b_model,
-                                                      trigram_mod=t_model,
-                                                      tokenized_sents=tokenized_sentences)
+    # Save
+    torch.save(master, path + 'english_glassdoor_reviews_text_preprocessed.pt')
+    print('----------------------------------------------------------  Done saving!')
+
     
     
