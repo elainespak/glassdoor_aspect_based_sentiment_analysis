@@ -4,6 +4,7 @@ import re
 import nltk
 import torch
 import itertools
+import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from gensim.models.phrases import Phrases, Phraser
@@ -11,6 +12,7 @@ from nltk import word_tokenize, sent_tokenize, FreqDist
 
 stemmer = PorterStemmer()
 nltk.download('stopwords')
+pd.set_option('display.max_columns', 500)
 
 
 def to_one_list(lists):
@@ -18,9 +20,8 @@ def to_one_list(lists):
     return list(itertools.chain.from_iterable(lists))
 
 
-def load_only_text(df_file, text_type, company=False):
+def load_only_text(master, text_type, company=False):
 
-    master = torch.load(df_file)
     if company==False:
         pass
     else:
@@ -58,9 +59,6 @@ def preprocess_word_tokenize(raw_sentences, replace_punctuation):
         
         # Sentence tokenization
         sentences = sent_tokenize(raw)
-        #if keep_track % 50 == 0:
-        #    print('PROCESSED: ')
-        #    print(sentences)
         
         # Lowercase, remove punctuations, remove stopwords
         temp = []
@@ -68,14 +66,12 @@ def preprocess_word_tokenize(raw_sentences, replace_punctuation):
             sent = sent.lower()
             sent = sent.translate(replace_punctuation)
             sent = [w for w in word_tokenize(sent) if w not in stopwords.words('english') and w != '']
-            if sent != []:
-                temp.append(sent)
-        if len(temp) != 0:
-            tokenized_sentences.extend(temp)
-            keep_track += 1
-            if keep_track % 3000 == 0:
-                print(f'{keep_track}/{count} done!')
-                print(temp)
+            temp.append(sent)
+        tokenized_sentences.append(temp)
+        keep_track += 1
+        if keep_track % 3000 == 0:
+            print(f'{keep_track}/{count} done!')
+            print(temp)
     return tokenized_sentences
 
 
@@ -113,3 +109,65 @@ def create_vocab(stemmed_sents):
     vocab_dict = dict(zip(vocab, range(len(vocab))))
     return vocab, vocab_dict
 
+
+
+if __name__ == "__main__":
+    import string
+    
+    maketrans = ''.maketrans
+    replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
+    
+    path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/
+    master = torch.load(path + 'english_glassdoor_reviews.pt')
+    company_list = list(master['company'].unique())[:10]
+    text_list = ['summary','pros','cons','advice']
+    
+    #master2 = master[:3000]
+    for text_type in text_list:
+        raw_sentences = list(master[text_type])
+        tokenized_sentences = preprocess_word_tokenize(raw_sentences, replace_punctuation)
+        master[text_type+'_tokenized'] = pd.Series(tokenized_sentences)
+        
+        print(f'{text_type} done!')
+
+
+    all_tokenized_sentences = []
+    for col in master:
+        if col.endswith('_tokenized'):
+            all_tokenized_sentences += list(master[col])
+    
+    flat = [to_one_list(a) for a in all_tokenized_sentences]
+    b_model, t_model = make_ngrams_model(flat, 25, 150)
+    
+    for col in master:
+        if col.endswith('_tokenized'):
+            temp = list(master[col])
+            new = [make_ngrams(b_model, t_model, review) for review in temp]
+            master[col+'_bigram'] = [n[0] for n in new]
+            master[col+'_trigram'] = [n[1] for n in new]
+            master[col+'_bigram_stemmed'] = [stemming(n[0]) for n in new]
+            master[col+'_trigram_stemmed'] = [stemming(n[1]) for n in new]
+    print('Done with pre-processing')
+        
+            
+    
+    
+    torch.save(b_model, path + 'english_glassdoor_reviews_bigram_model.pt')
+    torch.save(t_model, path + 'english_glassdoor_reviews_trigram_model.pt')
+    torch.save(bigram_sentences, path + 'english_glassdoor_reviews_bigram_sentences.pt')
+    torch.save(bigram_sentences, path + 'english_glassdoor_reviews_trigram_sentences.pt')
+    
+    for company in company_list:
+        temp = master[master['company']==company]
+        print(f'{company} text loaded!')
+        for text_type in text_list:
+            raw_sentences = list(temp[text_type])
+            tokenized_sentences = preprocess_word_tokenize(raw_sentences, replace_punctuation)
+            
+            
+    b_model, t_model = make_ngrams_model(tokenized_sentences, 5, 100)
+    bigram_sentences, trigram_sentences = make_ngrams(bigram_mod=b_model,
+                                                      trigram_mod=t_model,
+                                                      tokenized_sents=tokenized_sentences)
+    
+    

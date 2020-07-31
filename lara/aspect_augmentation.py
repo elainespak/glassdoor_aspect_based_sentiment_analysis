@@ -9,6 +9,7 @@ from text_preprocessing import *
 from nltk.stem.porter import PorterStemmer
 
 stemmer = PorterStemmer()
+pd.set_option('display.max_columns', 500)
 
 
 def label_sentence_UseVocab(final_sentences, VocabDict):
@@ -61,16 +62,15 @@ class Review:
 
 
 class Company:
-    def __init__(self, path, company_name, VocabDict, text_type):
+    def __init__(self, master, company_name, VocabDict, text_type):
         '''
         ###  INPUT
         # company_name: company name ( e.g., 'XYZ International Inc.' )
         '''
-        review_text = load_only_text(path, text_type, company=company_name)
-        tokenized_sentences = preprocess_word_tokenize(review_text, replace_punctuation)
-        bigram_sentences, _ = make_ngrams(b_model, t_model, tokenized_sentences) # Todo: make it possible to choose bi- or tri-
-        stemmed_sentences = stemming(bigram_sentences)
-        
+        text_df =  master[master['company']==company_name][[t+'_bigram_stemmed' for t in text_type]]
+        stemmed_sentences = []
+        for col in text_df.columns:
+            stemmed_sentences += list(text_df[col])
         self.Reviews = [Review(sent, VocabDict, text_type) for sent in stemmed_sentences]
         self.NumOfReviews = len(self.Reviews)
 
@@ -378,7 +378,14 @@ if __name__ == "__main__":
     f.close()
 
     
+    # Create W matrix for each review
+    create_all_W(analyzer,data)
     
+    # W matrix for all reviews
+    produce_data_for_rating(analyzer, data, output_path, percompany=False)
+    
+    # W matrix for reviews per company
+    produce_data_for_rating(analyzer, data, output_path, percompany=True)
     
     
     
