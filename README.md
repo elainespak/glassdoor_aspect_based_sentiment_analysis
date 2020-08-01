@@ -17,9 +17,6 @@ Therefore, it is possible to take apart a written text and analyze it in the abo
 
 I collected Glassdoor review data of every company that belonged to S&P 500 at least once from year 2008 to 2018.
 
-Some of the text mining techniques that I have applied so far:
-- Word2Vec from [this paper](https://arxiv.org/pdf/1301.3781.pdf)
-- Latent aspect rating analysis from [this paper](https://www.cs.virginia.edu/~hw5x/paper/rp166f-wang.pdf)
 
 ## Preprocessing
 1. Select only English reviews
@@ -30,3 +27,17 @@ Some of the text mining techniques that I have applied so far:
 4. Create bigrams and trigrams
 5. Apply stemming
 
+**Result: 1,401,126 sentences from 727 companies**
+
+
+## Aspect Labeling
+1. Select relevant aspects
+   - culture and value
+   - career opportunities
+   - senior leadership
+   - work-life balance
+   - compensation and benefits
+   - ~~approval of CEO~~
+   - ~~recommendation to friend~~
+   - business outlook
+2. Apply [latent aspect rating analysis (LARA)](https://www.cs.virginia.edu/~hw5x/paper/rp166f-wang.pdf)
