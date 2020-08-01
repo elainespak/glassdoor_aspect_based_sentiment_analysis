@@ -31,13 +31,19 @@ I collected Glassdoor review data of every company that belonged to S&P 500 at l
 
 
 ## Aspect Labeling
-1. Select relevant aspects
-   - culture and value
-   - career opportunities
-   - senior leadership
-   - work-life balance
-   - compensation and benefits
-   - ~~approval of CEO~~
-   - ~~recommendation to friend~~
-   - business outlook
+1. Select relevant aspect: culture and value; career opportunities; senior leadership; work-life balance; compensation and benefits; ~~approval of CEO~~; ~~recommendation to friend~~; business outlook
 2. Apply [latent aspect rating analysis (LARA)](https://www.cs.virginia.edu/~hw5x/paper/rp166f-wang.pdf)
+   - Seed words:
+      - culture and value: ['cultur', 'valu']
+      - career opportunities: ['career', 'opportun']
+      - senior leadership: ['senior', 'leadership', 'manag']
+      - work-life balance: ['life_bal', 'life', 'balanc']
+      - compensation and benefits: ['compens', 'benefit']
+      - business outlook: ['busi', 'outlook', 'futur']
+   - Final words:
+      - culture and value: ['cultur', 'valu', 'compani', 'core', 'corpor', 'strong', 'add', 'collabor', 'larg', 'big', 'within', 'move', 'innov', 'stabl', 'size', 'chang', 'organ', 'forward', 'global', 'promot', 'year', 'constant', 'polit', 'world', 'huge', 'structur', 'last', 'ago', 'past', 'layoff', '5', 'organiz']
+      - career opportunities: ['career', 'opportun', 'advanc', 'growth', 'path', 'learn', 'grow', 'lot', 'room', 'limit', 'develop', 'new', 'plenti', 'progress', 'train', 'technolog', 'skill', 'potenti', 'slow', 'curv', 'program', 'provid', 'latest', 'invest', 'profession', 'intern', 'softwar', 'tool', 'hire', 'process', 'cross', 'talent']
+      - senior leadership: ['senior', 'leadership', 'manag', 'upper', 'store', 'level', 'middl', 'micro', 'team', 'member', 'poor', 'district', 'lack', 'assist', 'entri', 'commun', 'execut', 'mid', 'director', 'leader', 'lead', 'account', 'incompet', 'support', 'direct', 'decis', 'lower', 'staff', 'advic', 'style', 'sr', 'listen', 'top']
+      - work-life balance: ['life_bal', 'life', 'balanc', 'work', 'famili', 'worklif', 'home', 'person', 'flexibl', 'hour', 'schedul', 'hard', 'environ', 'day', 'weekend', 'week', 'long', 'time', 'shift', 'holiday', 'fun', 'full', 'part', 'night', 'enjoy', 'vacat', 'get', 'done', 'paid', 'sick', 'easi', 'peopl', 'rid']
+      - compensation and benefits: ['compens', 'benefit', 'great', 'good', 'pay', 'health', 'packag', '401k', 'place', 'decent', 'insur', 'match', 'salari', 'low', 'competit', 'discount', 'averag', 'need', 'start', 'dental', 'medic', 'compar', 'overal', 'mani', 'increas', 'bonu', 'wage', 'make', 'perk', 'sometim', 'like', 'ok']
+      - business outlook: ['busi', 'outlook', 'futur', 'unit', 'model', 'run', 'analyst', 'uncertain', 'line', 'bottom', 'front', 'financi', 'oper', 'custom', 'strategi', 'servic', 'rude', 'focu', 'sale', 'deal', 'repres', 'rep', 'associ', 'goal', 'sell', 'product', 'specialist', 'solut', 'consult', 'focus', 'client', 'floor', 'unrealist']
