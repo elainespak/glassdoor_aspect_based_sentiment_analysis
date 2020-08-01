@@ -1,0 +1,6 @@
+compens,benefit,great,good,pay,health,packag,401k,place,decent,insur,match,salari,low,competit,discount,averag,need,start,dental,medic,compar,overal,mani,increas,bonu,wage,make,perk,sometim,like,ok,
+life_bal,life,balanc,work,famili,worklif,home,person,flexibl,hour,schedul,hard,environ,day,weekend,week,long,time,shift,holiday,fun,full,part,night,enjoy,vacat,get,done,paid,sick,easi,peopl,rid,
+cultur,valu,compani,core,corpor,strong,add,collabor,larg,big,within,move,innov,stabl,size,chang,organ,forward,global,promot,year,constant,polit,world,huge,structur,last,ago,past,layoff,5,organiz,
+career,opportun,advanc,growth,path,learn,grow,lot,room,limit,develop,new,plenti,progress,train,technolog,skill,potenti,slow,curv,program,provid,latest,invest,profession,intern,softwar,tool,hire,process,cross,talent,
+senior,leadership,manag,upper,store,level,middl,micro,team,member,poor,district,lack,assist,entri,commun,execut,mid,director,leader,lead,account,incompet,support,direct,decis,lower,staff,advic,style,sr,listen,top,
+busi,outlook,futur,unit,model,run,analyst,uncertain,line,bottom,front,financi,oper,custom,strategi,servic,rude,focu,sale,deal,repres,rep,associ,goal,sell,product,specialist,solut,consult,focus,client,floor,unrealist,

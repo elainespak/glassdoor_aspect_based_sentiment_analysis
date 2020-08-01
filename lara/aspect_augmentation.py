@@ -337,14 +337,14 @@ if __name__ == "__main__":
     analyzer = Bootstrapping()
     
     # Load aspect seedwords
-    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams_original.txt', vocab_dict)
+    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams_6.txt', vocab_dict)
     for aspect_num in analyzer.Aspect_Terms:
         print('-------- Aspect Seedwords:')
         print(aspect_num)
         print([vocab[num] for num in aspect_num])
     
     # Define corpus
-    master = torch.load(+ 'english_glassdoor_reviews_text_preprocessed.pt')
+    master = torch.load(path + 'english_glassdoor_reviews_text_preprocessed.pt')
     company_list = list(master['company'].unique())
     data = Corpus(master, company_list, vocab, vocab_dict)
     print('-------- Done creating corpus')
@@ -355,12 +355,12 @@ if __name__ == "__main__":
     print('-------- Done default labeling')
     
     # Calculate chi square
-    analyzer.calc_chi_sq(data, K) # it works! CHECK LATER to see if +0.00001 is justified
+    analyzer.calc_chi_sq(data, K) # it works! TODO: see if +0.00001 is justified
     print('-------- Done with chi-square')
     
     # Update the aspect keywords list
-    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams_original.txt', vocab_dict)
-    Add_Aspect_Keywords(analyzer, p=5, NumIter=7, c=data, K=K)
+    load_Aspect_Terms(analyzer, '../sample_data/lara/aspect_seed_words_bigrams_6.txt', vocab_dict)
+    Add_Aspect_Keywords(analyzer, p=5, NumIter=5, c=data, K=K)
     
     # Check final results
     for aspect_num in analyzer.Aspect_Terms:
@@ -370,13 +370,12 @@ if __name__ == "__main__":
     
     
     # Save the aspect keywords
-    aspectfile = path + 'aspect_final_words_bigrams_original.txt'
+    aspectfile = '../sample_data/lara/aspect_final_words_bigrams_6.txt'
     f = open(aspectfile, 'w', encoding='utf8')
     
     for aspect in analyzer.Aspect_Terms:
         print('-------- Final Aspect terms:')
         for w in aspect:
-            print(vocab[w])
             f.write(vocab[w])
             f.write(',')
         f.write('\n')
