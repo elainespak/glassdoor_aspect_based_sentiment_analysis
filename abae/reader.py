@@ -8,7 +8,8 @@ def is_number(token):
     return bool(num_regex.match(token))
 
 def create_vocab(domain, maxlen=0, vocab_size=0):
-    assert domain in {'restaurant', 'beer'}
+    #assert domain in {'restaurant', 'beer'}
+    assert domain in {'restaurant', 'beer', 'glassdoor'}
     source = '../preprocessed_data/'+domain+'/train.txt'
 
     total_words, unique_words = 0, 0
