@@ -59,7 +59,8 @@ def create_vocab(domain, maxlen=0, vocab_size=0):
     return vocab
 
 def read_dataset(domain, phase, vocab, maxlen):
-    assert domain in {'restaurant', 'beer'}
+    #assert domain in {'restaurant', 'beer'}
+    assert domain in {'restaurant', 'beer', 'glassdoor'}
     assert phase in {'train', 'test'}
     
     source = '../preprocessed_data/'+domain+'/'+phase+'.txt'
