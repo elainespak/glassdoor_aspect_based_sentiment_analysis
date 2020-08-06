@@ -8,7 +8,7 @@ from tqdm import tqdm
 pd.set_option('display.max_columns', 500)
 
 
-
+"""
 def parseSentence(line):
     lmtzr = WordNetLemmatizer()    
     stop = stopwords.words('english')
@@ -49,7 +49,7 @@ def preprocess(domain):
     preprocess_train(domain)
     print '\t'+domain+' test set ...'
     preprocess_test(domain)
-    
+"""
     
 if __name__ == "__main__":
     master = torch.load('../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_text_preprocessed.pt')
@@ -61,7 +61,12 @@ if __name__ == "__main__":
     
     domain = 'glassdoor'
     out = codecs.open('../sample_data/abae/'+domain+'/train.txt', 'w', 'utf-8')
-    for review in tqdm(all_tokenized_sentences):
+    for review in tqdm(all_tokenized_sentences[:-20000]):
+        for tokens in review:
+            if len(tokens) > 1:
+                out.write(' '.join(tokens)+'\n')
+    out = codecs.open('../sample_data/abae/'+domain+'/test.txt', 'w', 'utf-8')
+    for review in tqdm(all_tokenized_sentences[-20000:]):
         for tokens in review:
             if len(tokens) > 1:
                 out.write(' '.join(tokens)+'\n')
