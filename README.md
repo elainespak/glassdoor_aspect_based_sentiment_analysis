@@ -50,3 +50,4 @@ I collected Glassdoor review data of every company that belonged to S&P 500 at l
       - business outlook: ['busi', 'outlook', 'futur', 'unit', 'model', 'run', 'analyst', 'uncertain', 'line', 'bottom', 'front', 'financi', 'oper', 'custom', 'strategi', 'servic', 'rude', 'focu', 'sale', 'deal', 'repres', 'rep', 'associ', 'goal', 'sell', 'product', 'specialist', 'solut', 'consult', 'focus', 'client', 'floor', 'unrealist']
 3. Apply [attention-based aspect extraction (ABAE)](https://www.aclweb.org/anthology/P17-1036.pdf)
    - Original code published [here](https://github.com/ruidan/Unsupervised-Aspect-Extraction) by the authors (on Windows, must run with Python 2.7; also for Windows, run `set THEANO_FLAGS=device=cuda,floatX=float32 & python train.py --emb ../preprocessed_data/$domain/w2v_embedding --domain $domain -o output_dir` to avoid errors)
+   - 50,601,792 total words, 147,739 unique words
