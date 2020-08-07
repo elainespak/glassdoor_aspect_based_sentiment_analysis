@@ -49,6 +49,18 @@ I collected Glassdoor review data of every company that belonged to S&P 500 at l
       - compensation and benefits: ['compens', 'benefit', 'great', 'good', 'pay', 'health', 'packag', '401k', 'place', 'decent', 'insur', 'match', 'salari', 'low', 'competit', 'discount', 'averag', 'need', 'start', 'dental', 'medic', 'compar', 'overal', 'mani', 'increas', 'bonu', 'wage', 'make', 'perk', 'sometim', 'like', 'ok']
       - business outlook: ['busi', 'outlook', 'futur', 'unit', 'model', 'run', 'analyst', 'uncertain', 'line', 'bottom', 'front', 'financi', 'oper', 'custom', 'strategi', 'servic', 'rude', 'focu', 'sale', 'deal', 'repres', 'rep', 'associ', 'goal', 'sell', 'product', 'specialist', 'solut', 'consult', 'focus', 'client', 'floor', 'unrealist']
 3. Apply [attention-based aspect extraction (ABAE)](https://www.aclweb.org/anthology/P17-1036.pdf)
+   ```
+   @InProceedings{he-EtAl:2017:Long2,
+      author    = {He, Ruidan  and  Lee, Wee Sun  and  Ng, Hwee Tou  and  Dahlmeier, Daniel},
+      title     = {An Unsupervised Neural Attention Model for Aspect Extraction},
+      booktitle = {Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+      month     = {July},
+      year      = {2017},
+      address   = {Vancouver, Canada},
+      publisher = {Association for Computational Linguistics}
+      }
+   ```
+
    - Original code published [here](https://github.com/ruidan/Unsupervised-Aspect-Extraction) by the authors
    - On Windows, must run with Python 2.7
    - When using a novel dataset, start with `preprocess.py` and `word2vec.py`
