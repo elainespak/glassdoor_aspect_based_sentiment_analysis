@@ -10,7 +10,6 @@ import logging # OPTIONAL: if you want to have more information on what's happen
 #logging.basicConfig(level=logging.INFO)
 import matplotlib.pyplot as plt
 
-% matplotlib inline
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
 
@@ -124,47 +123,80 @@ print ("Our final sentence embedding vector of shape:", sentence_embedding.size(
 
 
 ###########
+import torch
+from transformers import BertTokenizer, BertModel
+import matplotlib.pyplot as plt
 
 class BERTEmbedding:
 
-    def __init__(self, args):
-        self.device = args.device
-        self.bert, self.vocab, self.tokenizer, self.tok = self.retrieve_kobert()
-        self.bert.eval()
+    def __init__(self, device, model_type, sent):
+         self.device = device
+         self.model_type = model_type
+         self.sent = sent
+         self.model, self.tokens_tensor, self.segments_tensors = self.retrieve_bert()
+         #self.embeddings = self.get_embeddings()
 
-    def retrieve_kobert(self):
-        bert, vocab = get_pytorch_kobert_model()
-        tokenizer = get_tokenizer()
-        tok = nlp.data.BERTSPTokenizer(tokenizer, vocab, lower=False)
+    def retrieve_bert(self):
+        tokenizer = BertTokenizer.from_pretrained(self.model_type,
+                                                  output_hidden_states = True)
+        marked_sent = '[CLS] ' + self.sent + ' [SEP]'
+        
+        # Split the sentence into tokens.
+        tokenized_sent = tokenizer.tokenize(marked_sent)
+        
+        # Map the token strings to their vocabulary indeces.
+        indexed_tokens = tokenizer.convert_tokens_to_ids(tokenized_sent)
+        segments_ids = [1] * len(tokenized_sent)
+        
+        # Convert inputs to PyTorch tensors
+        tokens_tensor = torch.tensor([indexed_tokens])
+        segments_tensors = torch.tensor([segments_ids])
+        
+        model = BertModel.from_pretrained(self.model_type,
+                                  output_hidden_states = True, # Whether the model returns all hidden-states.
+                                  )
+        model.eval()
+        
+        return model, tokens_tensor, segments_tensors
+        # Put the model in "evaluation" mode, meaning feed-forward operation.       
 
-        return bert.to(self.device), vocab, tokenizer, tok
+    def get_embeddings(self):
+         with torch.no_grad():
+              outputs = self.model(self.tokens_tensor,
+                                   self.segments_tensors)
+              hidden_states = outputs[2]
+         # Concatenate the tensors for all layers. We use `stack` here to
+         # create a new dimension in the tensor.
+         token_embeddings = torch.stack(hidden_states, dim=0)
+         # Remove dimension 1, the "batches".
+         token_embeddings = torch.squeeze(token_embeddings, dim=1)
+         token_embeddings = token_embeddings.permute(1,0,2)
+         
+         # Stores the token vectors, with shape [22 x 3,072]
+         token_vecs_cat = []
+         # `token_embeddings` is a [22 x 12 x 768] tensor.
+         # For each token in the sentence...
+         for token in token_embeddings:
+              cat_vec = torch.cat((token[-1], token[-2], token[-3], token[-4]), dim=0)
+              token_vecs_cat.append(cat_vec)
+         token_vecs = hidden_states[-2][0]
+         # Calculate the average of all 22 token vectors.
+         sentence_embedding = torch.mean(token_vecs, dim=0)
+         return sentence_embedding
 
-    def tokenize(self, sent):
-        tokenized_sent = ['[CLS]'] + self.tok(sent) + ['[SEP]'] # BERTSUM은 각 문장 앞에 [CLS] 토큰을, 각 문장 뒤에 [SEP] 토큰을 더함
-        return tokenized_sent
 
-    def token_to_ids(self, sent):
-        return self.tok.convert_tokens_to_ids(sent)
-
-    def get_embeddings(self, indexed_tokens):
-        # Extract KoBERT embedding from the last hidden layer
-        segments_ids = [1] * len(indexed_tokens)
-        tokens_tensor = torch.tensor([indexed_tokens]).to(self.device)
-        segments_tensors = torch.tensor([segments_ids]).to(self.device)
-        with torch.no_grad():
-            encoded_layers, _ = self.bert(tokens_tensor, segments_tensors)
-        token_vecs = encoded_layers[0]
-        # sentence_embedding = torch.mean(encoded_layers[0],dim=0) # 문장 단위 embedding이 필요할 때 사용
-        return token_vecs
-
-is_cuda = torch.cuda.is_available()
-if is_cuda and args.cuda >= 0:
-     args.device = torch.device(f"cuda:{args.cuda}")
-else:
-     args.device = torch.device("cpu")
-print(args.device)
-
-bert_embedding = BERTEmbedding(args)
-tokenized_text = bert_embedding.tokenize(sentence)
-token_ids = bert_embedding.token_to_ids(tokenized_text)
-sentence_emb = bert_embedding.get_embeddings(token_ids)
+if __name__ == "__main__":
+     
+     # Check for cpu / gpu
+     is_cuda = torch.cuda.is_available()
+     if is_cuda:
+          device = torch.device(f"cuda")
+     else:
+          device = torch.device("cpu")
+     print(device)
+     
+     # Set up
+     bert_embedding = BERTEmbedding(device, 'bert-base-uncased',
+                                    'the best company ever')
+     bert_embedding.retrieve_bert()
+     bert_embedding.get_embeddings()
