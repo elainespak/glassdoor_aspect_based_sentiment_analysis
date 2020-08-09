@@ -81,17 +81,36 @@ if __name__ == "__main__":
      bert_embedding = BERTEmbedding(device, 'bert-base-uncased')
      
      # Call data
-     path = 'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/abae/glassdoor/test.txt'
-     sentence_bert = []
+     master = torch.load('C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_text_preprocessed.pt')
+     all_tokenized_sentences = []
+     for col in master:
+         if col=='pros' or col=='cons' or col=='advice':
+             all_tokenized_sentences += list(master[col])
+             
+     bert_sentences = []
+     for sent in tqdm(all_tokenized_sentences):
+         bert_sentences.append(bert_embedding.get_embeddings(sent))
+     
+     """
      with open(path, 'r') as f:
          f = f.readlines()
          for sent in tqdm(f):
              sentence_bert.append(bert_embedding.get_embeddings(sent))
      torch.save('C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/abae/glassdoor/test.pt')
+     print('Done!')
+     
+     path = 'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/abae/glassdoor/train.txt'
+     sentence_bert = []
+     with open(path, 'r') as f:
+         f = f.readlines()
+         for sent in tqdm(f):
+             sentence_bert.append(bert_embedding.get_embeddings(sent))
+     torch.save('C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/abae/glassdoor/train.pt')
+     print('Done!')
      
      
         
-     """
+     
      test1=bert_embedding.get_embeddings('the best company ever')
      test2=bert_embedding.get_embeddings('toxic work environment')
      test3=bert_embedding.get_embeddings('great place to work for')
