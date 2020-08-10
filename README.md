@@ -1,4 +1,4 @@
-# ABSA with Glassdoor company reviews
+# Exploring Employee Experience & Discovering Company Characteristics with Glassdoor Reviews
 Company review websites, such as [Glassdoor](https://www.glassdoor.com/index.htm), are a platform for employees to anonymously write about their work experience.
 In other words, they enable job hunters to *shop* for a company based on others' reviews, just like customers shopping for items on online shopping malls.
 
