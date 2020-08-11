@@ -130,6 +130,8 @@ if __name__ == "__main__":
     path = 'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/'
     master = torch.load(path + '2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_text_preprocessed.pt')
     company_list = master['company'].unique()
+    all_len = len(company_list)
+    i = 0
     print('Done loading data!\n')
     
     for company in company_list:
@@ -142,6 +144,9 @@ if __name__ == "__main__":
         torch.save(bert_sentences,
                    path + 'baseline_bert/' + company + '_english_bert_sentence_embeddings.pt')
         print(f'\nDone with {company}!')
+        i += 1
+        if i%30 == 0:
+            print(f' *** {i/all_len} done so far')
     
     
     """
