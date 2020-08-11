@@ -121,7 +121,7 @@ if __name__ == "__main__":
          device = torch.device("cuda")
     else:
          device = torch.device("cpu")
-    print(device)
+    print(f'Using {device}')
     
     # Set up
     bert_embedding = BERTEmbedding(device, 'bert-base-uncased')
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     # Call data
     path = 'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/'
     master = torch.load(path + '2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_text_preprocessed.pt')
-    company_list = master['company'].unique()
+    company_list = list(master['company'].unique())
     all_len = len(company_list)
     i = 0
     print('Done loading data!\n')
@@ -143,6 +143,7 @@ if __name__ == "__main__":
             bert_sentences.append(bert_embedding.get_embeddings(sent).cpu())
         torch.save(bert_sentences,
                    path + 'baseline_bert/' + company + '_english_bert_sentence_embeddings.pt')
+        master = master[master['company'] != company]
         print(f'\nDone with {company}!')
         i += 1
         if i%30 == 0:
@@ -150,18 +151,7 @@ if __name__ == "__main__":
     
     
     """
-    master = torch.load(path + '2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_text_preprocessed.pt')
-    all_raw_sentences = load_only_text(master, ['pros', 'cons', 'advice'])
-    del master
-    all_tokenized_sentences = preprocess_sentence_tokenize(all_raw_sentences)
-    print('Done tokenizing!\n')
-    bert_sentences = []
-    for sent in tqdm(all_tokenized_sentences):
-        bert_sentences.append(bert_embedding.get_embeddings(sent).cpu())
-    # 3164840만큼 진행함
-    torch.save(bert_sentences,
-               'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/baseline_bert/english_bert_sentence_embeddings.pt')
-     
+    
     test1=bert_embedding.get_embeddings('the best company ever')
     test2=bert_embedding.get_embeddings('toxic work environment')
     test3=bert_embedding.get_embeddings('great place to work for')
