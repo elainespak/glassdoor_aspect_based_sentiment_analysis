@@ -2,7 +2,6 @@
 
 import re
 import torch
-import logging
 from tqdm import tqdm
 from nltk import sent_tokenize
 from scipy.spatial.distance import cosine
@@ -77,7 +76,6 @@ class BERTEmbedding:
         tokenized_sent = self.tokenizer.tokenize(marked_sent)
         if len(tokenized_sent) > 512:
             tokenized_sent = tokenized_sent[:512]
-
         # Map the token strings to their vocabulary indeces.
         indexed_tokens = self.tokenizer.convert_tokens_to_ids(tokenized_sent)
         segments_ids = [1] * len(tokenized_sent)
@@ -88,6 +86,8 @@ class BERTEmbedding:
         with torch.no_grad():
             outputs = self.model(tokens_tensor, segments_tensors)
             hidden_states = outputs[2]
+        """
+        # Only if we need word vectors
         # Concatenate the tensors for all layers. `stack` creates a new dimension in the tensor.
         token_embeddings = torch.stack(hidden_states, dim=0)
         
@@ -103,6 +103,7 @@ class BERTEmbedding:
         for token in token_embeddings:
              cat_vec = torch.cat((token[-1], token[-2], token[-3], token[-4]), dim=0)
              token_vecs_cat.append(cat_vec)
+        """
         token_vecs = hidden_states[-2][0]
         #print(token_vecs.size())
         
@@ -134,7 +135,7 @@ if __name__ == "__main__":
     i = 0
     print('Done loading data!\n')
     
-    for company in company_list:
+    for company in company_list[405:]:
         all_raw_sentences = load_only_text(master, ['pros', 'cons', 'advice'], company)
         all_tokenized_sentences = preprocess_sentence_tokenize(all_raw_sentences)
         print(f'Done tokenizing {company}, start creating BERT embeddings!')
@@ -147,7 +148,7 @@ if __name__ == "__main__":
         print(f'\nDone with {company}!')
         i += 1
         if i%30 == 0:
-            print(f' *** {i/all_len} done so far')
+            print(f' *** {i}/{all_len} done so far')
     
     
     """
