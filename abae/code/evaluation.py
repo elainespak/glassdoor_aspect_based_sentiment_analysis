@@ -24,12 +24,14 @@ parser.add_argument("--domain", dest="domain", type=str, metavar='<str>', defaul
 parser.add_argument("--ortho-reg", dest="ortho_reg", type=float, metavar='<float>', default=0.1, help="The weight of orthogonol regularizaiton (default=0.1)")
 
 args = parser.parse_args()
-out_dir = args.out_dir_path + '/' + args.domain
+#out_dir = args.out_dir_path + '/' + args.domain
+out_dir = args.out_dir_path + '/' + args.domain + '/aspect_size_' + str(args.aspect_size)
 # out_dir = '../pre_trained_model/' + args.domain
 U.print_args(args)
 
 assert args.algorithm in {'rmsprop', 'sgd', 'adagrad', 'adadelta', 'adam', 'adamax'}
-assert args.domain in {'restaurant', 'beer'}
+#assert args.domain in {'restaurant', 'beer'}
+assert args.domain in {'restaurant', 'beer', 'glassdoor'}
 
 from keras.preprocessing import sequence
 import reader as dataset
@@ -90,11 +92,17 @@ def evaluation(true, predict, domain):
             ['feel', 'taste+smell', 'look', 'overall', 'None'], digits=3))
 
 
-def prediction(test_labels, aspect_probs, cluster_map, domain):
-    label_ids = np.argsort(aspect_probs, axis=1)[:,-1]
-    predict_labels = [cluster_map[label_id] for label_id in label_ids]
-    evaluation(open(test_labels), predict_labels, domain)
+#def prediction(test_labels, aspect_probs, cluster_map, domain):
+#    label_ids = np.argsort(aspect_probs, axis=1)[:,-1]
+#    predict_labels = [cluster_map[label_id] for label_id in label_ids]
+#    evaluation(open(test_labels), predict_labels, domain)
 
+def prediction(aspect_probs, domain):
+    label_ids = np.argsort(aspect_probs, axis=1)[:,-1]
+    with open(args.output_dir+'/predicted_aspect_labels.txt', 'w') as f:
+        for l in label_ids:
+            f.write(l)
+            f.write('\n')
 
 ## Create a dictionary that map word index to word 
 vocab_inv = {}
@@ -140,8 +148,9 @@ for c in xrange(len(test_x)):
 #            12: 'Ambience', 13: 'Staff'}
 
 
-# print '--- Results on %s domain ---' % (args.domain)
+print '--- Results on %s domain ---' % (args.domain)
 # test_labels = '../preprocessed_data/%s/test_label.txt' % (args.domain)
-# prediction(test_labels, aspect_probs, cluster_map, domain=args.domain)
+#prediction(test_labels, aspect_probs, cluster_map, domain=args.domain)
+prediction(aspect_probs, domain=args.domain)
 
 
