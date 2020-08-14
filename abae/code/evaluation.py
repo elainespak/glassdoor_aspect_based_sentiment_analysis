@@ -31,7 +31,7 @@ U.print_args(args)
 
 assert args.algorithm in {'rmsprop', 'sgd', 'adagrad', 'adadelta', 'adam', 'adamax'}
 #assert args.domain in {'restaurant', 'beer'}
-assert args.domain in {'restaurant', 'beer', 'glassdoor'}
+assert args.domain in {'restaurant', 'beer', 'glassdoor', 'glassdoor_trigram'}
 
 from keras.preprocessing import sequence
 import reader as dataset
@@ -98,10 +98,21 @@ def evaluation(true, predict, domain):
 #    evaluation(open(test_labels), predict_labels, domain)
 
 def prediction(aspect_probs, domain):
-    label_ids = np.argsort(aspect_probs, axis=1)[:,-1]
-    with open(args.output_dir+'/predicted_aspect_labels.txt', 'w') as f:
-        for l in label_ids:
-            f.write(l)
+    label_ids = np.argsort(aspect_probs, axis=1)[:,-3:]
+    label_probs = np.sort(aspect_probs, axis=1)[:,-3:]
+    with open(out_dir+'/predicted_aspects.txt', 'w') as f:
+        for i, p in zip(label_ids, label_probs):
+            f.write(str(i[-1]))
+            f.write(',')
+            f.write(str(p[-1]))
+            f.write(',')
+            f.write(str(i[-2]))
+            f.write(',')
+            f.write(str(p[-2]))
+            f.write(',')
+            f.write(str(i[-3]))
+            f.write(',')
+            f.write(str(p[-3]))
             f.write('\n')
 
 ## Create a dictionary that map word index to word 

@@ -1,5 +1,6 @@
 import gensim
 import codecs
+import argparse
 
 class MySentences(object):
     def __init__(self, filename):
@@ -19,8 +20,8 @@ def main(domain):
 
 
 print 'Pre-training word embeddings ...'
-#main('restaurant')
-#main('beer')
-main('glassdoor')
+parser = argparse.ArgumentParser()
+parser.add_argument('--domain', type=str)
+args = parser.parse_args()
 
-
+main(args.domain)

@@ -135,7 +135,7 @@ if __name__ == "__main__":
     i = 0
     print('Done loading data!\n')
     
-    for company in company_list[405:]:
+    for company in company_list[633:]:
         all_raw_sentences = load_only_text(master, ['pros', 'cons', 'advice'], company)
         all_tokenized_sentences = preprocess_sentence_tokenize(all_raw_sentences)
         print(f'Done tokenizing {company}, start creating BERT embeddings!')

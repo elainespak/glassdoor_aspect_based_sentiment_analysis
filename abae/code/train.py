@@ -30,18 +30,19 @@ parser.add_argument("--maxlen", dest="maxlen", type=int, metavar='<int>', defaul
 parser.add_argument("--seed", dest="seed", type=int, metavar='<int>', default=1234, help="Random seed (default=1234)")
 parser.add_argument("-a", "--algorithm", dest="algorithm", type=str, metavar='<str>', default='adam', help="Optimization algorithm (rmsprop|sgd|adagrad|adadelta|adam|adamax) (default=adam)")
 #parser.add_argument("--domain", dest="domain", type=str, metavar='<str>', default='restaurant', help="domain of the corpus {restaurant, beer}")
-parser.add_argument("--domain", dest="domain", type=str, metavar='<str>', default='restaurant', help="domain of the corpus {restaurant, beer, glassdoor}")
+parser.add_argument("--domain", dest="domain", type=str, metavar='<str>', default='restaurant', help="domain of the corpus {restaurant, beer, glassdoor, glassdoor_trigram}")
 parser.add_argument("--ortho-reg", dest="ortho_reg", type=float, metavar='<float>', default=0.1, help="The weight of orthogonol regularizaiton (default=0.1)")
 #parser.add_argument("--ortho-reg", dest="ortho_reg", type=float, metavar='<float>', default=0.1, help="The weight of orthogonol regularizaiton (default=0.01)")
 
 args = parser.parse_args()
-out_dir = args.out_dir_path + '/' + args.domain
+#out_dir = args.out_dir_path + '/' + args.domain
+out_dir = args.out_dir_path + '/' + args.domain + '/aspect_size_' + str(args.aspect_size)
 U.mkdir_p(out_dir)
 U.print_args(args)
 
 assert args.algorithm in {'rmsprop', 'sgd', 'adagrad', 'adadelta', 'adam', 'adamax'}
 #assert args.domain in {'restaurant', 'beer'}
-assert args.domain in {'restaurant', 'beer', 'glassdoor'}
+assert args.domain in {'restaurant', 'beer', 'glassdoor', 'glassdoor_trigram'}
 
 if args.seed > 0:
     np.random.seed(args.seed)
