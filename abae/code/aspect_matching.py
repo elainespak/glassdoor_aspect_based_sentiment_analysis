@@ -33,7 +33,6 @@ dat['ratingRecommendToFriend'] = dat['ratingRecommendToFriend'].apply(lambda key
 # Save
 torch.save(dat, '../output_dir/glassdoor/gold/english_review_exploded.pt')
 
-
 def save_files(dat, i):
     i = '{0:0=3}'.format(i)
     for col in dat.columns:
