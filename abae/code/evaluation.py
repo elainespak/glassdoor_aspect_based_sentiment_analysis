@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+import os
 import argparse
 import logging
 import numpy as np
@@ -5,60 +8,15 @@ from time import time
 import utils as U
 from sklearn.metrics import classification_report
 import codecs
-
-######### Get hyper-params in order to rebuild the model architecture ###########
-# The hyper parameters should be exactly the same as those used for training
-parser = argparse.ArgumentParser()
-parser.add_argument("-o", "--out-dir", dest="out_dir_path", type=str, metavar='<str>', required=True, help="The path to the output directory")
-parser.add_argument("-e", "--embdim", dest="emb_dim", type=int, metavar='<int>', default=200, help="Embeddings dimension (default=200)")
-parser.add_argument("-b", "--batch-size", dest="batch_size", type=int, metavar='<int>', default=50, help="Batch size (default=50)")
-parser.add_argument("-v", "--vocab-size", dest="vocab_size", type=int, metavar='<int>', default=9000, help="Vocab size. '0' means no limit (default=9000)")
-parser.add_argument("-as", "--aspect-size", dest="aspect_size", type=int, metavar='<int>', default=14, help="The number of aspects specified by users (default=14)")
-parser.add_argument("--emb", dest="emb_path", type=str, metavar='<str>', help="The path to the word embeddings file")
-parser.add_argument("--epochs", dest="epochs", type=int, metavar='<int>', default=15, help="Number of epochs (default=15)")
-parser.add_argument("-n", "--neg-size", dest="neg_size", type=int, metavar='<int>', default=20, help="Number of negative instances (default=20)")
-parser.add_argument("--maxlen", dest="maxlen", type=int, metavar='<int>', default=0, help="Maximum allowed number of words during training. '0' means no limit (default=0)")
-parser.add_argument("--seed", dest="seed", type=int, metavar='<int>', default=1234, help="Random seed (default=1234)")
-parser.add_argument("-a", "--algorithm", dest="algorithm", type=str, metavar='<str>', default='adam', help="Optimization algorithm (rmsprop|sgd|adagrad|adadelta|adam|adamax) (default=adam)")
-parser.add_argument("--domain", dest="domain", type=str, metavar='<str>', default='restaurant', help="domain of the corpus {restaurant, beer}")
-parser.add_argument("--ortho-reg", dest="ortho_reg", type=float, metavar='<float>', default=0.1, help="The weight of orthogonol regularizaiton (default=0.1)")
-
-args = parser.parse_args()
-#out_dir = args.out_dir_path + '/' + args.domain
-out_dir = args.out_dir_path + '/' + args.domain + '/aspect_size_' + str(args.aspect_size)
-# out_dir = '../pre_trained_model/' + args.domain
-U.print_args(args)
-
-assert args.algorithm in {'rmsprop', 'sgd', 'adagrad', 'adadelta', 'adam', 'adamax'}
-#assert args.domain in {'restaurant', 'beer'}
-assert args.domain in {'restaurant', 'beer', 'glassdoor', 'glassdoor_trigram'}
-
 from keras.preprocessing import sequence
 import reader as dataset
-
-###### Get test data #############
-vocab, train_x, test_x, overall_maxlen = dataset.get_data(args.domain, vocab_size=args.vocab_size, maxlen=args.maxlen)
-test_x = sequence.pad_sequences(test_x, maxlen=overall_maxlen)
-
-
-############# Build model architecture, same as the model used for training #########
 from model import create_model
 import keras.backend as K
 from optimizers import get_optimizer
 
-optimizer = get_optimizer(args)
 
 def max_margin_loss(y_true, y_pred):
     return K.mean(y_pred)
-model = create_model(args, overall_maxlen, vocab)
-
-## Load the save model parameters
-model.load_weights(out_dir+'/model_param')
-model.compile(optimizer=optimizer, loss=max_margin_loss, metrics=[max_margin_loss])
-
-
-
-################ Evaluation ####################################
 
 def evaluation(true, predict, domain):
     true_label = []
@@ -115,34 +73,90 @@ def prediction(aspect_probs, domain):
             f.write(str(p[-3]))
             f.write('\n')
 
-## Create a dictionary that map word index to word 
-vocab_inv = {}
-for w, ind in vocab.items():
-    vocab_inv[ind] = w
+######### Get hyper-params in order to rebuild the model architecture ###########
+# The hyper parameters should be exactly the same as those used for training
+
+aspect_size = 20
+pre_dir = '../output_dir/glassdoor/aspect_size_' + str(aspect_size)
+out_dir = '../output_dir/glassdoor/aspect_size_' + str(aspect_size) + '/tests'
+algorithm = 'adam'
+domain = 'glassdoor'
+vocab_size = 9000 # '0' means no limit (default=9000)
+maxlen = 0 # Maximum allowed number of words during training. '0' means no limit (default=0)
+ortho_reg = 0.1
+neg_size = 20
+emb_dim = 200
+emb_path = r'../preprocessed_data/glassdoor/w2v_embedding'
+
+assert algorithm in {'rmsprop', 'sgd', 'adagrad', 'adadelta', 'adam', 'adamax'}
+
+# map for the pre-trained glassdoor model (pros, cons, advice / trigram / 20 aspects)
+cluster_map = {0: 'None', 1: 'Culture', 2: 'Perks', 3: 'Technical',
+               4: 'Overall', 5: 'Benefits', 6:'None',  7: 'Restructuring', 8: 'Structure and Policies', 
+               9: 'Customers, Products, and Services', 10: 'Moral Values', 11: 'Workspace', 
+               12: 'Working Conditions', 13: 'Senior Leadership', 14: 'Work Life Balance',
+               15: 'Location', 16: 'Career Opportunities: Junior Perspective',
+               17: 'Compensation', 18: 'Career Opportunities: Senior Perspective',
+               19: 'People'}
+    
+###### Get test data #############
+#filename = r'gold/sentences/all_tokenized_trigram_sentences_000'
+files = os.listdir(r'gold/sentences/')
+for filename in files:
+
+    vocab, train_x, test_x, overall_maxlen = dataset.get_data(domain,
+                                                              r'gold/sentences/'+filename,
+                                                              vocab_size=vocab_size,
+                                                              maxlen=maxlen)
+    test_x = sequence.pad_sequences(test_x, maxlen=overall_maxlen)
 
 
-test_fn = K.function([model.get_layer('sentence_input').input, K.learning_phase()], 
-        [model.get_layer('att_weights').output, model.get_layer('p_t').output])
-att_weights, aspect_probs = test_fn([test_x, 0])
-
-
-## Save attention weights on test sentences into a file 
-att_out = codecs.open(out_dir + '/att_weights', 'w', 'utf-8')
-print 'Saving attention weights on test sentences...'
-#print('Saving attention weights on test sentences...')
-for c in xrange(len(test_x)):
-    att_out.write('----------------------------------------\n')
-    att_out.write(str(c) + '\n')
-
-    word_inds = [i for i in test_x[c] if i!=0]
-    line_len = len(word_inds)
-    weights = att_weights[c]
-    weights = weights[(overall_maxlen-line_len):]
-
-    words = [vocab_inv[i] for i in word_inds]
-    att_out.write(' '.join(words) + '\n')
-    for j in range(len(words)):
-        att_out.write(words[j] + ' '+str(round(weights[j], 3)) + '\n')
+    ############# Build model architecture, same as the model used for training #########
+    optimizer = get_optimizer('adam')
+    model = create_model(ortho_reg, neg_size, emb_dim, aspect_size, emb_path, overall_maxlen, vocab)
+    
+    ## Load the save model parameters
+    model.load_weights(pre_dir+'/model_param')
+    model.compile(optimizer=optimizer, loss=max_margin_loss, metrics=[max_margin_loss])
+    
+    ################ Evaluation ####################################
+    ## Create a dictionary that map word index to word 
+    vocab_inv = {}
+    for w, ind in vocab.items():
+        vocab_inv[ind] = w
+    
+    test_fn = K.function([model.get_layer('sentence_input').input, K.learning_phase()], 
+            [model.get_layer('att_weights').output, model.get_layer('p_t').output])
+    att_weights, aspect_probs = test_fn([test_x, 0])
+    ### My code ###
+    label_ids = np.argsort(aspect_probs, axis=1)[:,-3:]
+    label_probs = np.sort(aspect_probs, axis=1)[:,-3:]
+    #############
+    
+    ## Save attention weights on test sentences into a file 
+    att_out = codecs.open(out_dir + '/att_weights_' + filename + '.txt', 'w', 'utf-8')
+    print 'Saving attention weights on test sentences...'
+    #print('Saving attention weights on test sentences...')
+    for c in xrange(len(test_x)):
+        att_out.write('----------------------------------------\n')
+        att_out.write(str(c) + '\n')
+    
+        word_inds = [i for i in test_x[c] if i!=0]
+        line_len = len(word_inds)
+        weights = att_weights[c]
+        weights = weights[(overall_maxlen-line_len):]
+    
+        words = [vocab_inv[i] for i in word_inds]
+        ### My code ###
+        att_out.write(cluster_map[label_ids[c][-1]] + ': ' + str(label_probs[c][-1]) + '\n' +
+                         cluster_map[label_ids[c][-2]] + ': ' + str(label_probs[c][-2]) + '\n' +
+                         cluster_map[label_ids[c][-3]] + ': ' + str(label_probs[c][-3]) + '\n')
+    
+        pass
+        #############
+        att_out.write(' '.join(words) + '\n')
+        for j in range(len(words)):
+            att_out.write(words[j] + ' '+str(round(weights[j], 3)) + '\n')
 
 
 
@@ -159,9 +173,7 @@ for c in xrange(len(test_x)):
 #            12: 'Ambience', 13: 'Staff'}
 
 
-print '--- Results on %s domain ---' % (args.domain)
-# test_labels = '../preprocessed_data/%s/test_label.txt' % (args.domain)
-#prediction(test_labels, aspect_probs, cluster_map, domain=args.domain)
-prediction(aspect_probs, domain=args.domain)
+print '--- Results on %s domain ---' % (domain)
+#prediction(aspect_probs, domain=domain)
 
 
