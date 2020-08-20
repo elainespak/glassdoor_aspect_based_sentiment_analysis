@@ -33,6 +33,7 @@ dat['ratingRecommendToFriend'] = dat['ratingRecommendToFriend'].apply(lambda key
 # Save
 torch.save(dat, '../output_dir/glassdoor/gold/english_review_exploded.pt')
 
+
 def save_files(dat, i):
     i = '{0:0=3}'.format(i)
     for col in dat.columns:
@@ -48,5 +49,7 @@ n = 15000  #chunk row size
 list_df = [dat[i:i+n] for i in range(0,dat.shape[0],n)]
 for i, df in tqdm(enumerate(list_df)):
     save_files(df, i)
+
+
 
 
