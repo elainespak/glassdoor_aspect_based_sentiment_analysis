@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 
+import re
 import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from nltk import sent_tokenize
 pd.set_option('display.max_columns', 500)
 
 
-path = 'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/'
-master = torch.load(path + '2008 to 2018 SnP 500 Firm Data_Master English Files/english_glassdoor_reviews_text_preprocessed.pt')
+# 1. Make exploded trigram data & rating data
+path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/'
+master = torch.load(path + 'english_glassdoor_reviews_text_preprocessed.pt')
 print(master.head(10))
-
-### Visualize % of missing ratings for each aspect
-aspect_rating_count = len(master[master['ratingWorkLifeBalance']!=0.0])
-all_count = len(master)
-###
 
 master['all'] = master['pros_tokenized_trigram'] + master['cons_tokenized_trigram'] + master['advice_tokenized_trigram']
 dat = master[['company', 'all'] + [col for col in master.columns if col.startswith('rating')]]
@@ -51,5 +49,44 @@ for i, df in tqdm(enumerate(list_df)):
     save_files(df, i)
 
 
+# 2. Make exploded data along with original sentences
+def sentence_tokenize(raw):
+    raw = re.sub('\r\n|\n-|\n|\r','. ', raw)
+    raw = re.sub(',\.+ ', ', ', raw)
+    raw = re.sub('\.+ ', '. ', raw)
+    raw = re.sub('&amp;', '&', raw)
+    
+    sentences = sent_tokenize(raw)
+    return sentences
 
+path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/'
+master = torch.load(path + 'english_glassdoor_reviews_text_preprocessed.pt')
+master['pros'] = master['pros'].apply(lambda x: sentence_tokenize(x))
+print('done')
+master['cons'] = master['cons'].apply(lambda x: sentence_tokenize(x))
+print('done')
+master['advice'] = master['advice'].apply(lambda x: sentence_tokenize(x))
+master.head()
+master['all'] = master['pros'] + master['cons'] + master['advice']
+master['all_trigram'] = master['pros_tokenized_trigram'] + master['cons_tokenized_trigram'] + master['advice_tokenized_trigram']
+master['allall'] = [tuple(x) for x in master[['all','all_trigram']].values.tolist()]
+
+master['newall'] = ''
+for idx in tqdm(range(len(master))):
+    sent, tok = master['allall'][idx]
+    keep = []    
+    for j in range(len(tok)):
+        if len(tok[j])>1:
+            keep.append(sent[j])
+    master['newall'][idx] = keep
+
+
+dat = master.explode('newall')
+dat2 = dat[~pd.isnull(dat['newall'])]
+len(dat2)
+
+ori = torch.load('../abae/preprocessed_data/glassdoor/gold/english_review_exploded.pt')
+ori['original'] = list(dat2['newall'])
+
+torch.save(ori, '../abae/preprocessed_data/glassdoor/gold/original_english_review_exploded.pt')
 
