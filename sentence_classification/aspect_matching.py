@@ -41,7 +41,10 @@ def create_input(att_path, aspect_dictionary):
 def filter_by_aspect(data, aspect):
     data_aspect = data[data['aspect'] == aspect]
     data_aspect = data_aspect[['original', 'rating'+aspect]]
+    data_aspect = data_aspect[data_aspect['rating'+aspect] != 0]
     data_aspect = data_aspect.reset_index(drop=True)
+    data_aspect['rating'+aspect] = data_aspect['rating'+aspect].apply(lambda x: str(x-1))
+    # index must begin with 0, otherwise triggers the device-side assert triggered error
     return data_aspect
 
 
