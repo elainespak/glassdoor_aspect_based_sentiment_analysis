@@ -25,12 +25,19 @@ rcParams['figure.figsize'] = 12, 8
 RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+print('Using device:', device, '\n')
+if device.type == 'cuda':
+    print(torch.cuda.get_device_name(0))
+    print('Memory Usage:')
+    print('Allocated:', round(torch.cuda.memory_allocated(0)/1024**3,1), 'GB')
+    print('Cached:   ', round(torch.cuda.memory_cached(0)/1024**3,1), 'GB')
 
 
 aspect = 'CultureAndValues'
 df = torch.load(f'../sample_data/sentence_classification/{aspect}_for_sentence_classification.pt')
-df['sentiment'] = df['rating'+aspect].apply(lambda x: int(x))
+#df['sentiment'] = df['rating'+aspect].apply(lambda x: int(x))
 #df = df.to_dict('records')
 
 # Vis
@@ -59,6 +66,7 @@ MAX_LEN = 64
 RANDOM_SEED = 1024
 BATCH_SIZE = 16
 class_names = list(range(0,5))
+class_names = ['negative', 'neutral', 'positive']
 
 tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
 
@@ -133,7 +141,7 @@ class SentimentClassifier(nn.Module):
 model = SentimentClassifier(len(class_names))
 model = model.to(device)
 
-EPOCHS = 3
+EPOCHS = 10
 optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
 total_steps = len(train_data_loader) * EPOCHS
 scheduler = get_linear_schedule_with_warmup(optimizer,num_warmup_steps=0,num_training_steps=total_steps)
@@ -212,9 +220,9 @@ for epoch in range(EPOCHS):
     history['val_acc'].append(val_acc)
     history['val_loss'].append(val_loss)
     if val_acc > best_accuracy:
-        torch.save(model.state_dict(), 'best_model_state.bin')
+        torch.save(model.state_dict(), aspect+'_'+str(EPOCHS)+'_best_model_state.bin')
         best_accuracy = val_acc
-        
+        # 3:58 시작
 plt.plot(history['train_acc'], label='train accuracy')
 plt.plot(history['val_acc'], label='validation accuracy')
 plt.title('Training history')
@@ -252,7 +260,7 @@ def get_predictions(model, data_loader):
 
 
 y_review_texts, y_pred, y_pred_probs, y_test = get_predictions(model, test_data_loader)
-print(classification_report(y_test, y_pred, target_names=class_names))
+print(classification_report(y_test, y_pred, target_names=[str(c) for c in class_names]))
 
 def show_confusion_matrix(confusion_matrix):
     hmap = sns.heatmap(confusion_matrix, annot=True, fmt="d", cmap="Blues")
