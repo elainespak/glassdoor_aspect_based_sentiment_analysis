@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# https://www.curiousily.com/posts/sentiment-analysis-with-bert-and-hugging-face-using-pytorch-and-python/
 
 import transformers
 from transformers import BertModel, BertTokenizer, AdamW, get_linear_schedule_with_warmup
@@ -35,7 +36,7 @@ if device.type == 'cuda':
     print('Cached:   ', round(torch.cuda.memory_cached(0)/1024**3,1), 'GB')
 
 
-aspect = 'CultureAndValues'
+aspect = 'CompensationAndBenefits'
 df = torch.load(f'../sample_data/sentence_classification/{aspect}_for_sentence_classification.pt')
 #df['sentiment'] = df['rating'+aspect].apply(lambda x: int(x))
 #df = df.to_dict('records')
@@ -52,8 +53,15 @@ def to_sentiment(rating):
     return 1
   else:
     return 2
+
+def to_sentiment(rating):
+  rating = float(rating)
+  if rating <= 2:
+    return 0
+  else:
+    return 1
 df['sentiment'] = df['rating'+aspect].apply(to_sentiment)
-class_names = ['negative', 'neutral', 'positive']
+class_names = ['negative', 'positive']
 
 ax = sns.countplot(df.sentiment)
 plt.xlabel('review sentiment')
@@ -64,9 +72,10 @@ ax.set_xticklabels(class_names)
 PRE_TRAINED_MODEL_NAME = 'bert-base-uncased'
 MAX_LEN = 64
 RANDOM_SEED = 1024
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 class_names = list(range(0,5))
 class_names = ['negative', 'neutral', 'positive']
+class_names = ['negative', 'positive']
 
 tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME)
 
@@ -142,7 +151,7 @@ model = SentimentClassifier(len(class_names))
 model = model.to(device)
 
 EPOCHS = 10
-optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
+optimizer = AdamW(model.parameters(), lr=1e-6, correct_bias=False)
 total_steps = len(train_data_loader) * EPOCHS
 scheduler = get_linear_schedule_with_warmup(optimizer,num_warmup_steps=0,num_training_steps=total_steps)
 loss_fn = nn.CrossEntropyLoss().to(device)
@@ -220,7 +229,7 @@ for epoch in range(EPOCHS):
     history['val_acc'].append(val_acc)
     history['val_loss'].append(val_loss)
     if val_acc > best_accuracy:
-        torch.save(model.state_dict(), aspect+'_'+str(EPOCHS)+'_best_model_state.bin')
+        torch.save(model.state_dict(), aspect+'_'+str(EPOCHS)+'_'+str(len(class_names))+'_best_model_state.bin')
         best_accuracy = val_acc
         # 3:58 시작
 plt.plot(history['train_acc'], label='train accuracy')
