@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # https://mccormickml.com/2019/07/22/BERT-fine-tuning/#41-bertforsequenceclassification
+
+import os
 import time
 import torch
 import random
@@ -13,24 +15,13 @@ from torch.utils.data import TensorDataset, random_split
 from transformers import get_linear_schedule_with_warmup
 from transformers import BertForSequenceClassification, AdamW, BertConfig
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-pd.set_option('display.max_columns', 500)
+pd.set_option('display.max_columns', 50)
 pd.set_option('precision', 2)
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print('Using device:', device, '\n')
-if device.type == 'cuda':
-    print(torch.cuda.get_device_name(0))
-    print('Memory Usage:')
-    print('Allocated:', round(torch.cuda.memory_allocated(0)/1024**3,1), 'GB')
-    print('Cached:   ', round(torch.cuda.memory_cached(0)/1024**3,1), 'GB')
-    
-aspect = 'CompensationAndBenefits'
-df = torch.load(f'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/sentence_classification/{aspect}_for_sentence_classification.pt')
-
 def to_sentiment(rating):
     rating = float(rating)
-    if rating <= 2:
+    if rating <= 1.5:
         return 0
     else:
         return 1
@@ -50,10 +41,23 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print('Using device:', device, '\n')
+if device.type == 'cuda':
+    print(torch.cuda.get_device_name(0))
+    print('Memory Usage:')
+    print('Allocated:', round(torch.cuda.memory_allocated(0)/1024**3,1), 'GB')
+    print('Cached:   ', round(torch.cuda.memory_cached(0)/1024**3,1), 'GB')
+    
+aspect = 'CompensationAndBenefits'
+df = torch.load(f'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/sentence_classification/{aspect}_for_sentence_classification.pt')
+
+
+
 df['labels'] = df['rating'+aspect].apply(to_sentiment)
 #class_names = ['negative', 'positive']
 # make toy example
-df = df.sample(frac=0.1)
+#df = df.sample(frac=0.1)
 sentences = df.original.values
 labels = df.labels.values
 
@@ -377,14 +381,15 @@ print("Training complete!")
 print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
 
 
-import os
+
 # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
-output_dir = f'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sentence_classification/toy_{aspect}/'
+kind = 'all'
+output_dir = f'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sentence_classification/{aspect}_{kind}_epoch{str(epoch)}/'
 # Create output directory if needed
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-
 print(f"Saving model to {output_dir}")
+
 # Save a trained model, configuration and tokenizer using `save_pretrained()`.
 # They can then be reloaded using `from_pretrained()`
 model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
@@ -432,4 +437,20 @@ plt.xticks([1, 2, 3, 4])
 plt.show()
 
 
-
+sent = "The pay is low compared to the industry standard"
+with torch.no_grad():
+    encoded = tokenizer.encode_plus(
+                        sent,                      # Sentence to encode.
+                        add_special_tokens = True, # Add '[CLS]' and '[SEP]'
+                        max_length = 64,           # Pad & truncate all sentences.
+                        pad_to_max_length = True,
+                        return_attention_mask = True,   # Construct attn. masks.
+                        return_tensors = 'pt',     # Return pytorch tensors.
+                   )
+    outputs = model(encoded['input_ids'].to(device),
+                    token_type_ids=encoded['token_type_ids'].to(device),
+                    attention_mask=encoded['attention_mask'].to(device))
+    logits = outputs[0]
+    print(logits)
+    # Move logits and labels to CPU
+    logits = logits.detach().cpu().numpy()
