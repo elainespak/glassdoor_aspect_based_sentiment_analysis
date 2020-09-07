@@ -118,8 +118,8 @@ if __name__ == "__main__":
     del word_tokens
     
     b_model, t_model = make_ngrams_model(list(match['tokenizedSentence']), 20, 80)
-    torch.save(b_model, path + 'english_glassdoor_reviews_bigram_model.pt')
-    torch.save(t_model, path + 'english_glassdoor_reviews_trigram_model.pt')
+    torch.save(b_model, path + 'bigram_model.pt')
+    torch.save(t_model, path + 'trigram_model.pt')
     
     _, match['trigramSentence'] = make_ngrams(b_model, t_model, match['tokenizedSentence'])
     torch.save(match, path + 'sentence_match.pt')
