@@ -2,13 +2,14 @@
 
 # https://captum.ai/tutorials/Bert_SQUAD_Interpret
 
-
+import nltk
 import torch
 import numpy as np
 import pandas as pd
 import torch.nn as nn
 import seaborn as sns
 import matplotlib.pyplot as plt
+from nltk.corpus import stopwords
 from captum.attr import visualization as viz
 from captum.attr import LayerIntegratedGradients
 from transformers import BertTokenizer, BertForSequenceClassification
@@ -90,34 +91,46 @@ class FineTunedBertForAttribution:
         #self.sentclass_pos_forward_func = self.logits[0].max(1).values
         
         lig = LayerIntegratedGradients(self.sentclass_pos_forward_func, self.model.bert.embeddings)
-        attributions_start, delta_start = lig.attribute(inputs = self.input_ids,
+        attributions_start, self.delta_start = lig.attribute(inputs = self.input_ids,
                                                         baselines = self.ref_input_ids,
                                                         additional_forward_args=(self.token_type_ids, self.attention_mask),
                                                         return_convergence_delta=True)
         attributions_start = attributions_start.sum(dim=-1).squeeze(0)
-        print(attributions_start)
-        attributions_start_summary = attributions_start / torch.norm(attributions_start)
-        self.attributions_start_summary = attributions_start_summary.detach().tolist()
+        self.attributions_start_summary = attributions_start / torch.norm(attributions_start)
+        #self.attributions_start_summary = self.attributions_start_summary.detach().tolist()
         return self.attributions_start_summary
     
-    def show_results(self, ground_truth):
+    def get_top_words(self, ground_truth, custom_stopwords):
         indices = self.input_ids[0].detach().tolist()
+        self.ground_truth = ground_truth
         self.all_tokens = self.tokenizer.convert_ids_to_tokens(indices)
         
-        self.ground_truth = ground_truth
+        if self.prediction == self.ground_truth:
+            zipped = zip(self.attributions_start_summary.detach().tolist(), self.all_tokens)
+            zipped = [(abs(i[0]), i[1]) for i in zipped if i[1] not in custom_stopwords]
+            zipped = sorted(zipped, reverse=True)
+            n = len(zipped)//3
+            self.top_n = zipped[:n]
+            
+    def show_results(self):
         print('Review sentence: ', self.text)
         print(f'Predicted Answer: {self.prediction} vs. Gold: {self.ground_truth}')
-        for t, a in zip(self.all_tokens, self.attributions_start_summary):
+        for t, a in zip(self.all_tokens, self.attributions_start_summary.detach().tolist()):
             print(t + '\t\t' + str(a))
+    
+    
 
 
 def to_sentiment(rating):
     rating = float(rating)
-    if rating <= 2:
+    if rating <= 1.5:
         return 0
     else:
         return 1
- 
+
+
+def get_highest_attributes():
+
 
 if __name__ == "__main__":
     
@@ -134,42 +147,48 @@ if __name__ == "__main__":
     aspect = 'CompensationAndBenefits'
     epochs = 3
     kind = 'all'
-    #FINE_TUNED_MODEL_NAME = f'./{aspect}_{kind}_epoch{str(epochs)}/'
-    FINE_TUNED_MODEL_NAME = f'./toy_{aspect}/'
-    
+    FINE_TUNED_MODEL_NAME = f'./{aspect}_{kind}_epoch{str(epochs)}/'
+
     aspect = 'CompensationAndBenefits'
     df = torch.load(f'../sample_data/sentence_classification/{aspect}_for_sentence_classification.pt')
     df['labels'] = df['rating'+aspect].apply(to_sentiment)
-    df = df[:5000]
+    df = df[:35000]
     
-    idx = 4070
-    text = df.original[idx]
-    ground_truth = df.labels[idx]
-    
+    custom_stopwords = stopwords.words('english')+[',','.','-', "'", '"', '/']
     attribution_model = FineTunedBertForAttribution(FINE_TUNED_MODEL_NAME, device)
     attribution_model.retrieve_fine_tuned_bert()
-    attribution_model.construct_input_ref_pair(text)
-    attribution_model.construct_input_ref_token_type_pair()
-    attribution_model.construct_attention_mask()
-    attribution_model.predict_label()
-    attribution_model.attribution()
-    attribution_model.show_results(ground_truth)
-     
-
-"""
-# storing couple samples in an array for visualization purposes
-start_position_vis = viz.VisualizationDataRecord(
-                        attributions_start_sum,
-                        torch.max(torch.softmax(logits[0], dim=1)),
-                        torch.argmax(logits[0]),
-                        torch.argmax(logits[0]),
-                        str(ground_truth),
-                        attributions_start_sum.sum(),       
-                        all_tokens,
-                        delta_start)
-
-
-print('\033[1m', 'Visualizations For Start Position', '\033[0m')
-viz.visualize_text([start_position_vis])
-"""
+    
+    #idx = 3
+    for idx in range(10):
+        text = df.original[idx]
+        ground_truth = df.labels[idx]
+        attribution_model.construct_input_ref_pair(text)
+        attribution_model.construct_input_ref_token_type_pair()
+        attribution_model.construct_attention_mask()
+        attribution_model.predict_label()
+        attribution_model.attribution()
+        attribution_model.get_top_words(ground_truth, custom_stopwords)
+        #attribution_model.show_results()
+        print(attribution_model.top_n)
+    
+    
+    """
+    # Doesn't work for some reason..
+    # storing couple samples in an array for visualization purposes
+    start_position_vis = viz.VisualizationDataRecord(
+                            attribution_model.attributions_start_summary,
+                            torch.max(attribution_model.logits[0]),
+                            attribution_model.prediction,
+                            attribution_model.prediction,
+                            ground_truth,
+                            attribution_model.attributions_start_summary.sum(),       
+                            attribution_model.all_tokens,
+                            attribution_model.delta_start
+                            )
+    
+    
+    print('\033[1m', 'Visualizations For Start Position', '\033[0m')
+    from IPython.core.display import display, HTML
+    display(HTML(viz.visualize_text([start_position_vis])))
+    """
 

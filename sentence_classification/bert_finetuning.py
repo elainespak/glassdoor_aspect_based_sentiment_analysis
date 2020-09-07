@@ -120,48 +120,10 @@ def create_input_dataloader(sentences, labels, train_ratio=0.8, batch_size=16):
             )
     return tokenizer, train_dataloader, validation_dataloader
 
-def save_model(model, tokenizer, output_dir):
-    """ Saving best-practices: if you use defaults names for the model,
-        you can reload it using from_pretrained() """
-        
-    # Create output directory if needed
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    print(f"Saving model to {output_dir}")
-    
-    # Save a trained model, configuration and tokenizer using `save_pretrained()`.
-    # They can then be reloaded using `from_pretrained()`
-    model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
-    model_to_save.save_pretrained(output_dir)
-    tokenizer.save_pretrained(output_dir)
-    torch.save(model.state_dict(), output_dir + 'model.ckpt')
-    # Good practice: save your training arguments together with the trained model
-    # torch.save(args, os.path.join(output_dir, 'training_args.bin'))
-    
-if __name__ == '__main__':
-    
-    device = cuda_or_cpu()
-    
-    # Load data
-    aspect = 'WorkLifeBalance'
-    df = torch.load(f'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/sentence_classification/{aspect}_for_sentence_classification.pt')
-    df['labels'] = df['rating'+aspect].apply(to_sentiment)
-    sentences = df.original.values
-    labels = df.labels.values
-    #class_names = ['negative', 'positive']
-    
-    tokenizer, train_dataloader, validation_dataloader = create_input_dataloader(sentences, labels, train_ratio=0.8, batch_size=16)
-    
-    kind = 'all'
-    epochs = 2 # Number of training epochs. The BERT authors recommend between 2 and 4.
-    seed_val = 42 # Set the seed value all over the place to make this reproducible.
-    output_dir = f'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sentence_classification/{aspect}_{kind}_epoch{str(epochs)}/'
-    # Total number of training steps is [number of batches] x [number of epochs]. 
-    # (Note that this is not the same as the number of training samples).
-    total_steps = len(train_dataloader) * epochs
-    
+def train_BertForSequenceClassification(device, seed_val, epochs, total_steps, train_dataloader, validation_dataloader):
     # Load BertForSequenceClassification, the pretrained BERT model with a single 
     # linear classification layer on top. 
+    print('Loading pre-trained BERT...')
     model = BertForSequenceClassification.from_pretrained(
         "bert-base-uncased", # Use the 12-layer BERT model, with an uncased vocab.
         num_labels = 2, # The number of output labels--2 for binary classification.
@@ -354,7 +316,6 @@ if __name__ == '__main__':
             # accumulate it over all batches.
             total_eval_accuracy += flat_accuracy(logits, label_ids)
             
-    
         # Report the final accuracy for this validation run.
         avg_val_accuracy = total_eval_accuracy / len(validation_dataloader)
         print("  Accuracy: {0:.2f}".format(avg_val_accuracy))
@@ -383,11 +344,55 @@ if __name__ == '__main__':
     print("")
     print("Training complete!")
     print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
+    
+    return model, training_stats
 
+def save_model(model, tokenizer, output_dir):
+    """ Saving best-practices: if you use defaults names for the model,
+        you can reload it using from_pretrained() """
+        
+    # Create output directory if needed
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    print(f"Saving model to {output_dir}")
+    
+    # Save a trained model, configuration and tokenizer using `save_pretrained()`.
+    # They can then be reloaded using `from_pretrained()`
+    model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
+    model_to_save.save_pretrained(output_dir)
+    tokenizer.save_pretrained(output_dir)
+    torch.save(model.state_dict(), output_dir + 'model.ckpt')
+    # Good practice: save your training arguments together with the trained model
+    # torch.save(args, os.path.join(output_dir, 'training_args.bin'))
+    
+
+if __name__ == '__main__':
+    
+    device = cuda_or_cpu()
+    
+    # Load data
+    aspect = 'Overall'
+    df = torch.load(f'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sample_data/sentence_classification/{aspect}_for_sentence_classification.pt')
+    df['labels'] = df['rating'+aspect].apply(to_sentiment)
+    sentences = df.original.values
+    labels = df.labels.values
+    #class_names = ['negative', 'positive']
+    
+    tokenizer, train_dataloader, validation_dataloader = create_input_dataloader(sentences, labels, train_ratio=0.8, batch_size=16)
+    
+    kind = 'all'
+    epochs = 2 # Number of training epochs. The BERT authors recommend between 2 and 4.
+    seed_val = 42 # Set the seed value all over the place to make this reproducible.
+    output_dir = f'C:/Users/elain/Desktop/glassdoor_aspect_based_sentiment_analysis/sentence_classification/{aspect}_{kind}_epoch{str(epochs)}/'
+    # Total number of training steps is [number of batches] x [number of epochs]. 
+    # (Note that this is not the same as the number of training samples).
+    total_steps = len(train_dataloader) * epochs
+    
+    model, training_stats = train_BertForSequenceClassification(device, seed_val, epochs, total_steps, train_dataloader, validation_dataloader)
     save_model(model, tokenizer, output_dir)
     
     
-    
+    """
     # Create a DataFrame from our training statistics.
     df_stats = pd.DataFrame(data=training_stats)
     
@@ -441,3 +446,4 @@ if __name__ == '__main__':
         print(logits)
         # Move logits and labels to CPU
         logits = logits.detach().cpu().numpy()
+    """
