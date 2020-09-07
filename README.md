@@ -32,7 +32,7 @@ I collected Glassdoor review data of every company that belonged to S&P 500 at l
 
 ## Aspect Labeling
 1. Select relevant aspect: culture and value; career opportunities; senior leadership; work-life balance; compensation and benefits; ~~approval of CEO~~; ~~recommendation to friend~~; business outlook
-2. Apply [latent aspect rating analysis (LARA)](https://www.cs.virginia.edu/~hw5x/paper/rp166f-wang.pdf)
+2. Apply Chi-Square statistics from [latent aspect rating analysis (LARA)](https://www.cs.virginia.edu/~hw5x/paper/rp166f-wang.pdf)
    - Original code not written in Python
    - Seed words:
       - culture and value: ['cultur', 'valu']
