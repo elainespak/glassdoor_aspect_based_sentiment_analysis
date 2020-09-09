@@ -7,9 +7,8 @@ import torch
 import itertools
 import pandas as pd
 from tqdm import tqdm
+from nltk import FreqDist
 from nltk.corpus import stopwords
-from nltk import sent_tokenize, FreqDist
-from nltk.stem.porter import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 from gensim.models.phrases import Phrases, Phraser
 from sklearn.feature_extraction.text import CountVectorizer
@@ -18,7 +17,6 @@ nltk.download('wordnet')
 nltk.download('stopwords')
 stop = stopwords.words('english')
 
-stemmer = PorterStemmer()
 lmtzr = WordNetLemmatizer()
 pd.set_option('display.max_columns', 50)
 
@@ -67,18 +65,9 @@ def make_ngrams(bigram_mod, trigram_mod, tokenized_sents):
     return bigram_sents, trigram_sents
 
 
-def stemming(ngram_sents):
-    stemmed_sents = []
-    for sent in ngram_sents:
-        stemmed = [stemmer.stem(w) for w in sent]
-        if len(stemmed)>0:
-            stemmed_sents.append(stemmed)
-    return stemmed_sents
-
-
-def create_vocab(stemmed_sents):
-    # Gather every word from every sentence into one list
-    words = to_one_list(to_one_list(stemmed_sents))
+def create_vocab(sents):
+    # Gather every sentence into one list
+    words = to_one_list(sents)
     # Count occurrence of every word
     freq = FreqDist(words)
     # Create the official "vocab" with only frequent words

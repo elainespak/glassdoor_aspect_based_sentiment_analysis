@@ -5,23 +5,27 @@ import os
 import math
 import torch
 import string
+import itertools
 import numpy as np
 import pandas as pd
 from nltk import FreqDist
-from text_preprocessing import *
-from nltk.stem.porter import PorterStemmer
 
-stemmer = PorterStemmer()
-pd.set_option('display.max_columns', 500)
+
+pd.set_option('display.max_columns', 50)
 maketrans = ''.maketrans
 replace_punctuation = maketrans(string.punctuation, ' '*len(string.punctuation))
+
+
+def to_one_list(lists):
+    """ list of lists to one list , e.g. [[1,2],[3,4]] -> [1,2,3,4] """
+    return list(itertools.chain.from_iterable(lists))
 
 
 def label_sentence_UseVocab(final_sentences, VocabDict):
     '''
     Label every word of a sentence by using:
     1) a corresponding number from the VocabDict (vocabulary lookup table)
-        (e.g., '-Amazing people' --> [0, 1]) which really means ['amaz', 'peopl'])
+        (e.g., '-Amazing people' --> [0, 1]) which really means ['amazing', 'people'])
         OR
     2) "None" label (TODO)
     '''
@@ -38,7 +42,7 @@ class Sentence_info:
         '''
         ###  INPUT
         # sent: vocabdict_labeled_sentence
-          ( e.g., '-Amazing people' --> [0, 1]) which really means ['amaz', 'peopl'] )
+          ( e.g., '-Amazing people' --> [0, 1]) which really means ['amazing', 'people'] )
         
         ###  DEFINED
         # word_frequency: occurrence count of each word in sent
@@ -72,7 +76,7 @@ class Company:
         ###  INPUT
         # company_name: company name ( e.g., 'XYZ International Inc.' )
         '''
-        text_df =  master[master['company']==company_name][[t+'_tokenized_bigram_stemmed' for t in text_type]]
+        text_df =  master[master['company']==company_name][text_type]
         stemmed_sentences = []
         for col in text_df.columns:
             stemmed_sentences += list(text_df[col])
@@ -81,7 +85,7 @@ class Company:
 
 
 class Corpus:
-    def __init__(self, master, corpus, Vocab, VocabDict, text_type=['summary','pros','cons','advice']):
+    def __init__(self, master, corpus, Vocab, VocabDict, text_type=['trigramSentence']):
         '''
         ###  INPUT
         # corpus: list of all companies
@@ -97,7 +101,7 @@ def label_aspect(Sentence_info, aspects_num, K):
     '''
     ###  INPUT
     # aspects_num: list of list of aspects
-                   ( e.g., [['pay','money','benefits'], ['coworkers','team','colleagues']] )
+                   ( e.g., [['pay','money','benefit'], ['coworker','team','colleague']] )
     # K: number of different aspects
     
     ###  OUTPUT
@@ -214,7 +218,7 @@ def load_Aspect_Terms(analyzer, seedwords_path, VocabDict):
     analyzer.Aspect_Terms=[]
     with open(seedwords_path, 'r') as f:
         for line in f:
-            aspect = [VocabDict[stemmer.stem(w.strip().lower())] for w in line.split(',')]
+            aspect = [VocabDict[w.strip().lower()] for w in line.split(',')]
             analyzer.Aspect_Terms.append(aspect)
     print("---------------------------- Aspect Keywords loading completed! ---------")
 
@@ -334,19 +338,20 @@ if __name__ == "__main__":
     vocab_dict = torch.load(path + 'vocab_dict.pt')
     b_model =torch.load(path + 'bigram_model.pt')
     t_model = torch.load(path + 'trigram_model.pt')
-    sentences = torch.load(path + 'english_glassdoor_reviews_text_preprocessed.pt')
+    sentences = torch.load(path + 'sentence_match.pt')
     
     # Create analyzer
     analyzer = Bootstrapping()
     
     # Load aspect seedwords
-    load_Aspect_Terms(analyzer, output_path+'aspect_seed_words_bigrams_6.txt', vocab_dict)
+    load_Aspect_Terms(analyzer, output_path+'seed_words_trigrams_6.txt', vocab_dict)
     for aspect_num in analyzer.Aspect_Terms:
         print('-------- Aspect Seedwords:')
         print(aspect_num)
         print([vocab[num] for num in aspect_num])
     
     # Define corpus
+    sentences['company'] = 'company'
     company_list = list(sentences['company'].unique())
     data = Corpus(sentences, company_list, vocab, vocab_dict)
     print('-------- Done creating corpus')
@@ -361,7 +366,7 @@ if __name__ == "__main__":
     print('-------- Done with chi-square')
     
     # Update the aspect keywords list
-    load_Aspect_Terms(analyzer, output_path+'aspect_seed_words_bigrams_6.txt', vocab_dict)
+    load_Aspect_Terms(analyzer, output_path+'seed_words_trigrams_6.txt', vocab_dict)
     Add_Aspect_Keywords(analyzer, p=5, NumIter=5, c=data, K=K)
     
     # Check final results
@@ -372,7 +377,7 @@ if __name__ == "__main__":
     
     
     # Save the aspect keywords
-    aspectfile = output_path+'aspect_final_words_bigrams_6.txt'
+    aspectfile = output_path+'final_words_trigrams_6.txt'
     f = open(aspectfile, 'w', encoding='utf8')
     
     for aspect in analyzer.Aspect_Terms:
