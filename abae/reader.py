@@ -7,10 +7,9 @@ num_regex = re.compile('^[+-]?[0-9]+\.?[0-9]*$')
 def is_number(token):
     return bool(num_regex.match(token))
 
-def create_vocab(domain, maxlen=0, vocab_size=0):
-    #assert domain in {'restaurant', 'beer'}
-    assert domain in {'restaurant', 'beer', 'glassdoor', 'glassdoor_trigram'}
-    source = '../preprocessed_data/'+domain+'/train.txt'
+def create_vocab(maxlen=0, vocab_size=0):
+    #assert domain in {'restaurant', 'beer', 'glassdoor', 'glassdoor_trigram'}
+    source = '../sample_data/abae/train.txt'
 
     total_words, unique_words = 0, 0
     word_freqs = {}
@@ -47,7 +46,7 @@ def create_vocab(domain, maxlen=0, vocab_size=0):
         #print (f'  keep the top {vocab_size} words')
 
     #Write (vocab, frequence) to a txt file
-    vocab_file = codecs.open('../preprocessed_data/%s/vocab' % domain, mode='w', encoding='utf8')
+    vocab_file = codecs.open('../sample_data/abae/vocab', mode='w', encoding='utf8')
     sorted_vocab = sorted(vocab.items(), key=operator.itemgetter(1))
     for word, index in sorted_vocab:
         if index < 3:
@@ -58,12 +57,11 @@ def create_vocab(domain, maxlen=0, vocab_size=0):
 
     return vocab
 
-def read_dataset(domain, phase, vocab, maxlen):
-    #assert domain in {'restaurant', 'beer'}
-    assert domain in {'restaurant', 'beer', 'glassdoor', 'glassdoor_trigram'}
-    assert phase in {'train', 'test'}
+def read_dataset(phase, vocab, maxlen):
+    #assert domain in {'restaurant', 'beer', 'glassdoor', 'glassdoor_trigram'}
+    #assert phase in {'train', 'test'}
     
-    source = '../preprocessed_data/'+domain+'/'+phase+'.txt'
+    source = '../sample_data/abae/'+phase+'.txt'
     num_hit, unk_hit, total = 0., 0., 0.
     maxlen_x = 0
     data_x = []
@@ -96,31 +94,22 @@ def read_dataset(domain, phase, vocab, maxlen):
 
 
 
-def get_data(domain, vocab_size=0, maxlen=0):
-    print 'Reading data from', domain
+def get_data(vocab_size=0, maxlen=0):
     print ' Creating vocab ...'
-    #print(f'Reading data from {domain}')
-    #print('Creating vocab ...')
-    vocab = create_vocab(domain, maxlen, vocab_size)
+    vocab = create_vocab(maxlen, vocab_size)
     print ' Reading dataset ...'
     print '  train set'
-    #print(' Reading dataset ...')
-    #print('  train set')
-    train_x, train_maxlen = read_dataset(domain, 'train', vocab, maxlen)
+    train_x, train_maxlen = read_dataset('train', vocab, maxlen)
     print '  test set'
-    #print('  test set')
-    test_x, test_maxlen = read_dataset(domain, 'test', vocab, maxlen)
+    test_x, test_maxlen = read_dataset('test', vocab, maxlen)
     maxlen = max(train_maxlen, test_maxlen)
     return vocab, train_x, test_x, maxlen
     
 
 
 if __name__ == "__main__":
-    vocab, train_x, test_x, maxlen = get_data('restaurant')
+    vocab, train_x, test_x, maxlen = get_data()
     print len(train_x)
     print len(test_x)
     print maxlen
-    #print(len(train_x))
-    #print(len(test_x))
-    #print(maxlen)
 

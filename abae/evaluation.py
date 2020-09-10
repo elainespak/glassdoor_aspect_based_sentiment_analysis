@@ -13,6 +13,7 @@ import reader as dataset
 from model import create_model
 import keras.backend as K
 from optimizers import get_optimizer
+from tqdm import tqdm
 
 
 def max_margin_loss(y_true, y_pred):
@@ -55,7 +56,7 @@ def evaluation(true, predict, domain):
 #    predict_labels = [cluster_map[label_id] for label_id in label_ids]
 #    evaluation(open(test_labels), predict_labels, domain)
 
-def prediction(aspect_probs, domain):
+def prediction(aspect_probs):
     label_ids = np.argsort(aspect_probs, axis=1)[:,-3:]
     label_probs = np.sort(aspect_probs, axis=1)[:,-3:]
     with open(out_dir+'/predicted_aspects.txt', 'w') as f:
@@ -77,16 +78,15 @@ def prediction(aspect_probs, domain):
 # The hyper parameters should be exactly the same as those used for training
 
 aspect_size = 20
-pre_dir = '../output_dir/glassdoor/aspect_size_' + str(aspect_size)
-out_dir = '../output_dir/glassdoor/aspect_size_' + str(aspect_size) + '/tests'
+pre_dir = '../sample_data/abae/aspect_size_' + str(aspect_size)
+out_dir = pre_dir + '/tests'
 algorithm = 'adam'
-domain = 'glassdoor'
 vocab_size = 9000 # '0' means no limit (default=9000)
 maxlen = 0 # Maximum allowed number of words during training. '0' means no limit (default=0)
 ortho_reg = 0.1
 neg_size = 20
 emb_dim = 200
-emb_path = r'../preprocessed_data/glassdoor/w2v_embedding'
+emb_path = r'../sample_data/abae/w2v_embedding'
 
 assert algorithm in {'rmsprop', 'sgd', 'adagrad', 'adadelta', 'adam', 'adamax'}
 
@@ -100,12 +100,12 @@ cluster_map = {0: 'None', 1: 'Culture', 2: 'Perks', 3: 'Technical',
                19: 'People'}
     
 ###### Get test data #############
-#filename = r'gold/sentences/all_tokenized_trigram_sentences_000'
-files = os.listdir(r'gold/sentences/')
-for filename in files:
+filepath = r'../preprocessed_data/glassdoor/gold/sentences/'
+files = os.listdir(filepath)
+for filename in tqdm(files):
 
     vocab, train_x, test_x, overall_maxlen = dataset.get_data(domain,
-                                                              r'gold/sentences/'+filename,
+                                                              'gold/sentences/'+filename.split('.t')[0],
                                                               vocab_size=vocab_size,
                                                               maxlen=maxlen)
     test_x = sequence.pad_sequences(test_x, maxlen=overall_maxlen)
@@ -173,7 +173,6 @@ for filename in files:
 #            12: 'Ambience', 13: 'Staff'}
 
 
-print '--- Results on %s domain ---' % (domain)
 #prediction(aspect_probs, domain=domain)
 
 
