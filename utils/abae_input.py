@@ -9,16 +9,15 @@ pd.set_option('display.max_columns', 50)
 
 
 def save_to_textfile(out, sentences):
-    for review in tqdm(sentences):
-        for tokens in review:
-            out.write(' '.join(tokens)+'\n')
+    for tokens in tqdm(sentences):
+        out.write(' '.join(tokens)+'\n')
     
     
 def make_train_test(df, task, outputpath, sentence_type, test_size):
     
     df = df.sample(frac = 1)
     sentences = df[sentence_type]
-    indices = df.index.values
+    indices = df['sentenceId']
     
     if task == 'master':
         out = codecs.open(outputpath+'train.txt', 'w', 'utf-8')
