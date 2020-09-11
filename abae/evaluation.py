@@ -19,43 +19,6 @@ from tqdm import tqdm
 def max_margin_loss(y_true, y_pred):
     return K.mean(y_pred)
 
-def evaluation(true, predict, domain):
-    true_label = []
-    predict_label = []
-
-    if domain == 'restaurant':
-
-        for line in predict:
-            predict_label.append(line.strip())
-
-        for line in true:
-            true_label.append(line.strip())
-
-        print(classification_report(true_label, predict_label, 
-            ['Food', 'Staff', 'Ambience', 'Anecdotes', 'Price', 'Miscellaneous'], digits=3))
-
-    else:
-        for line in predict:
-            label = line.strip()
-            if label == 'smell' or label == 'taste':
-              label = 'taste+smell'
-            predict_label.append(label)
-
-        for line in true:
-            label = line.strip()
-            if label == 'smell' or label == 'taste':
-              label = 'taste+smell'
-            true_label.append(label)
-
-        print(classification_report(true_label, predict_label, 
-            ['feel', 'taste+smell', 'look', 'overall', 'None'], digits=3))
-
-
-#def prediction(test_labels, aspect_probs, cluster_map, domain):
-#    label_ids = np.argsort(aspect_probs, axis=1)[:,-1]
-#    predict_labels = [cluster_map[label_id] for label_id in label_ids]
-#    evaluation(open(test_labels), predict_labels, domain)
-
 def prediction(aspect_probs):
     label_ids = np.argsort(aspect_probs, axis=1)[:,-3:]
     label_probs = np.sort(aspect_probs, axis=1)[:,-3:]
@@ -101,11 +64,11 @@ cluster_map = {0: 'None', 1: 'Culture', 2: 'Perks', 3: 'Technical',
     
 ###### Get test data #############
 filepath = r'../preprocessed_data/glassdoor/gold/sentences/'
+filepath = '../sample_data/abae/tests/'
 files = os.listdir(filepath)
 for filename in tqdm(files):
 
-    vocab, train_x, test_x, overall_maxlen = dataset.get_data(domain,
-                                                              'gold/sentences/'+filename.split('.t')[0],
+    vocab, train_x, test_x, overall_maxlen = dataset.get_data(filepath + filename.split('.t')[0],
                                                               vocab_size=vocab_size,
                                                               maxlen=maxlen)
     test_x = sequence.pad_sequences(test_x, maxlen=overall_maxlen)
