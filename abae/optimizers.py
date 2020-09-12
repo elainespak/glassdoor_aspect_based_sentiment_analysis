@@ -1,5 +1,5 @@
 import keras.optimizers as opt
-"""
+
 def get_optimizer(args):
 
 	clipvalue = 0
@@ -40,3 +40,4 @@ def get_optimizer(algorithm):
 		optimizer = opt.Adamax(lr=0.002, beta_1=0.9, beta_2=0.999, epsilon=1e-08, clipnorm=clipnorm, clipvalue=clipvalue)
 	
 	return optimizer
+"""

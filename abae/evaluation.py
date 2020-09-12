@@ -42,7 +42,10 @@ def prediction(aspect_probs):
 
 aspect_size = 20
 pre_dir = '../sample_data/abae/aspect_size_' + str(aspect_size)
-out_dir = pre_dir + '/tests'
+out_dir = pre_dir + '/tests_results'
+if not os.path.exists(out_dir):
+    os.makedirs(out_dir)
+
 algorithm = 'adam'
 vocab_size = 9000 # '0' means no limit (default=9000)
 maxlen = 0 # Maximum allowed number of words during training. '0' means no limit (default=0)
@@ -63,7 +66,6 @@ cluster_map = {0: 'None', 1: 'Culture', 2: 'Perks', 3: 'Technical',
                19: 'People'}
     
 ###### Get test data #############
-filepath = r'../preprocessed_data/glassdoor/gold/sentences/'
 filepath = '../sample_data/abae/tests/'
 files = os.listdir(filepath)
 for filename in tqdm(files):

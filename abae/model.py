@@ -9,7 +9,7 @@ from my_layers import Attention, Average, WeightedSum, WeightedAspectEmb, MaxMar
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
-"""
+
 def create_model(args, maxlen, vocab):
 
     def ortho_reg(weight_matrix):
@@ -111,6 +111,6 @@ def create_model(ortho_reg1, neg_size, emb_dim, aspect_size, emb_path, maxlen, v
         model.get_layer('aspect_emb').W.set_value(emb_reader.get_aspect_matrix(aspect_size))
 
     return model
-
+"""
 
 
