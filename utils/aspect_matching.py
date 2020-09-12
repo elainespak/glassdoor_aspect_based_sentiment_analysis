@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import os
+import ast
 import torch
 import pandas as pd
 from tqdm import tqdm
-pd.set_option('display.max_columns', 500)
+pd.set_option('display.max_columns', 50)
 
 
 def label_aspect(a1, a2, a3, dictionary):
@@ -33,7 +34,7 @@ def create_input(att_path, aspect_dictionary):
         sent_dict.append(temp)
     
     df = pd.DataFrame(sent_dict)
-    df['aspect'] = df['aspect_1'].apply(lambda a: d[a.split(':')[0]])
+    df['aspect'] = df['aspect_1'].apply(lambda a: a.split(':')[0])
     #df['aspect'] = df.apply(lambda x: label_aspect(x['aspect_1'], x['aspect_2'], x['aspect_3'], d), axis=1)
     return df
 
@@ -51,7 +52,14 @@ def filter_by_aspect(data, aspect):
 if __name__ == '__main__':
 
     # Parameters
-    path = '../abae/output_dir/glassdoor/aspect_size_20/tests/'
+    texttype = 'cons'
+    path = '../sample_data/abae/'+texttype+'/aspect_size_15/'
+    
+    with open(path + 'cluster_map.txt', 'r') as f:
+        cluster_map = f.readlines()
+    cluster_map = ''.join([i.replace('\n', '') for i in cluster_map])
+    cluster_map = ast.literal_eval(cluster_map)
+    """
     d = {# None
          'None': 'None',
          # ?
@@ -72,14 +80,21 @@ if __name__ == '__main__':
          'Career Opportunities: Senior Perspective': 'CareerOpportunities',
          'Career Opportunities': 'CareerOpportunities'}
     aspects = {'Overall', 'CompensationAndBenefits', 'CultureAndValues', 'WorkLifeBalance', 'SeniorLeadership', 'CareerOpportunities'}
-    
+    """
     # Make input data for sentence classification model
     label = pd.DataFrame()
-    for att_file in tqdm(os.listdir(path)):
-        filepath = path + att_file
-        temp = create_input(filepath, d)[['tokenized_sentence', 'aspect']]
+    for att_file in tqdm(os.listdir(path+'tests_results/')):
+        filepath = path +'tests_results/' + att_file
+        temp = create_input(filepath, cluster_map)
         label = pd.concat([label, temp])
     label = label.reset_index(drop=True)
+    
+    with open('../sample_data/abae/' + texttype + '/indices.txt', 'r') as f:
+        nums = f.readlines()
+    
+    origin = torch.load('../sample_data/master/sentence_match.pt')
+    label['sentenceId'] = origin['sentenceId']
+    
     
     origin = torch.load('../abae/preprocessed_data/glassdoor/gold/original_english_review_exploded.pt')
     origin = origin[['original']+[col for col in origin.columns if col.startswith('rating')]]
