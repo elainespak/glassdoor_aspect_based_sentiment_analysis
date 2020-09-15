@@ -3,9 +3,36 @@
 import os
 import ast
 import torch
+import pickle
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 pd.set_option('display.max_columns', 50)
+
+
+def decode_pickle(dat):
+    df = []
+    d = {'words': '', 'sentence_embedding': '', 'unweighted_sentence_embedding': '', 'attention_weights': '',
+         'aspect_1': '', 'aspect_2': '', 'aspect_3': '',
+         'aspect_1_prob': '', 'aspect_2_prob': '', 'aspect_3_prob': ''
+         }
+    for item in dat:
+        for key in item.keys():
+            if type(item[key]) is bytes:
+                temp = item[key].decode('utf-8')
+            else:
+                temp = item[key]
+            d[key.decode('utf-8')] = temp
+        df.append(d)
+        d = {'words': '', 'sentence_embedding': '', 'unweighted_sentence_embedding': '', 'attention_weights': '',
+         'aspect_1': '', 'aspect_2': '', 'aspect_3': '',
+         'aspect_1_prob': '', 'aspect_2_prob': '', 'aspect_3_prob': ''
+         }
+    return df
+
+
+def cosine(u, v):
+    return np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
 
 
 def label_aspect(a1, a2, a3, dictionary):
@@ -53,56 +80,87 @@ if __name__ == '__main__':
 
     # Parameters
     texttype = 'cons'
-    path = '../sample_data/abae/'+texttype+'/aspect_size_15/'
+    path = '../sample_data/abae/'+texttype
     
-    with open(path + 'cluster_map.txt', 'r') as f:
+    # Bring data
+    with open(path + '/aspect_size_12/cluster_map.txt', 'r') as f:
         cluster_map = f.readlines()
     cluster_map = ''.join([i.replace('\n', '') for i in cluster_map])
     cluster_map = ast.literal_eval(cluster_map)
+    
+    testpath = path + '/aspect_size_12/tests_results/'
+    df = []
+    for file in tqdm(os.listdir(testpath)):
+        with open(testpath+file, 'rb') as f:
+            data = pickle.load(f, encoding='bytes')
+        df += decode_pickle(data)
+    
+    with open(path + '/indices.txt', 'r') as f:
+        indices = f.readlines()
+    indices = [i.replace('\n','') for i in indices]
+    
+    for d, idx in zip(df, indices):
+        d['sentenceId'] = int(idx)
+    
+    # Match sentence with company
+    origin = torch.load('../sample_data/master/review_metadata.pt')
+    origin = origin[['reviewId','company']]
+    sentence = torch.load('../sample_data/master/sentence_match.pt')
+    final = pd.merge(sentence, origin, on='reviewId')
     """
-    d = {# None
-         'None': 'None',
-         # ?
-         'Technical': '?', 'Restructuring': '?', 'Structure and Policies': '?',
-         'Customers, Products, and Services': '?', 'Workspace': '?', 'Location': '?',
-         # Overall
-         'Overall': 'Overall',
-         # CompensationAndBenefits
-         'Benefits': 'CompensationAndBenefits', 'Perks': 'CompensationAndBenefits', 'Compensation': 'CompensationAndBenefits',
-         # CultureAndValues
-         'Moral Values': 'CultureAndValues', 'Culture': 'CultureAndValues', 'People': 'CultureAndValues',
-         # WorkLifeBalance
-         'Working Conditions': 'WorkLifeBalance', 'Work Life Balance': 'WorkLifeBalance',
-         #SeniorLeadership
-         'Senior Leadership': 'SeniorLeadership',
-         # CareerOpportunities
-         'Career Opportunities: Junior Perspective': 'CareerOpportunities',
-         'Career Opportunities: Senior Perspective': 'CareerOpportunities',
-         'Career Opportunities': 'CareerOpportunities'}
-    aspects = {'Overall', 'CompensationAndBenefits', 'CultureAndValues', 'WorkLifeBalance', 'SeniorLeadership', 'CareerOpportunities'}
+    print(df[20]['words'])
+    print(df[20]['sentenceId'])
+    print(df[400]['words'])
+    print(df[400]['sentenceId'])
+    print(df[3080010]['words'])
+    print(df[3080010]['sentenceId'])
+    
+    origin[origin['sentenceId']==int(df[20]['sentenceId'])]
+    origin[origin['sentenceId']==int(df[400]['sentenceId'])]
+    origin[origin['sentenceId']==int(df[3080010]['sentenceId'])]
     """
-    # Make input data for sentence classification model
-    label = pd.DataFrame()
-    for att_file in tqdm(os.listdir(path+'tests_results/')):
-        filepath = path +'tests_results/' + att_file
-        temp = create_input(filepath, cluster_map)
-        label = pd.concat([label, temp])
-    label = label.reset_index(drop=True)
+    del origin, sentence
     
-    with open('../sample_data/abae/' + texttype + '/indices.txt', 'r') as f:
-        nums = f.readlines()
+    df = pd.DataFrame(df)
+    master = pd.merge(df, final[['sentenceId','trigramSentence','company']], on='sentenceId')
+    del final, df
     
-    origin = torch.load('../sample_data/master/sentence_match.pt')
-    label['sentenceId'] = origin['sentenceId']
+
+
+    master['aspect_1'].value_counts().plot.bar()
+    company_list = list(master['company'].unique())
+    aspect_list = list(master['aspect_1'].unique())
+    
+    all_sentence = {}
+    for company in tqdm(company_list):
+        for aspect in aspect_list:
+            temp = master[(master['company']==company) & (master['aspect_1']==aspect)]
+            if len(temp)==0:
+                pass
+            else:
+                avg = np.mean(list(temp['sentence_embedding']), axis=0)
+                all_sentence[(company, aspect)] = avg
+    
+    torch.save(all_sentence, path+'/aspect_size_12/average_sentence_embeddings.pt')
+    
+    microsoft = {}
+    for (company, avg) in all_sentence.keys():
+        try:
+            microsoft[company] = cosine(all_sentence[('Microsoft_Corp','Leadership')],all_sentence[(company,'Leadership')])
+        except:
+            print(f'{company} had no reivew')
+    
+    result = [(k,v) for k, v in sorted(microsoft.items(), key=lambda item: item[1])]
+    print(result[-40:])
+    
+    microsoft2 = {}
+    for (company, avg) in all_sentence.keys():
+        try:
+            microsoft2[company] = cosine(all_sentence[('Microsoft_Corp','Work Hours')],all_sentence[(company,'Work Hours')])
+        except:
+            print(f'{company} had no reivew')
+    
+    result2 = [(k,v) for k, v in sorted(microsoft2.items(), key=lambda item: item[1])]
+    print(result2[-40:])
     
     
-    origin = torch.load('../abae/preprocessed_data/glassdoor/gold/original_english_review_exploded.pt')
-    origin = origin[['original']+[col for col in origin.columns if col.startswith('rating')]]
-    
-    data = pd.concat([origin, label], axis=1)
-    
-    for aspect in aspects:
-        data_aspect = filter_by_aspect(data, aspect)
-        torch.save(data_aspect, f'../sample_data/sentence_classification/{aspect}_for_sentence_classification.pt')
-        print(f'Done with {aspect}')
-       
