@@ -79,7 +79,7 @@ def filter_by_aspect(data, aspect):
 if __name__ == '__main__':
 
     # Parameters
-    texttype = 'cons'
+    texttype = 'pros'
     path = '../sample_data/abae/'+texttype
     
     # Bring data
@@ -106,27 +106,25 @@ if __name__ == '__main__':
     origin = torch.load('../sample_data/master/review_metadata.pt')
     origin = origin[['reviewId','company']]
     sentence = torch.load('../sample_data/master/sentence_match.pt')
-    final = pd.merge(sentence, origin, on='reviewId')
+    df = pd.DataFrame(df)
     """
-    print(df[20]['words'])
-    print(df[20]['sentenceId'])
-    print(df[400]['words'])
-    print(df[400]['sentenceId'])
-    print(df[3080010]['words'])
-    print(df[3080010]['sentenceId'])
+    print(df['words'][20])
+    print(df['sentenceId'][20])
+    print(df['words'][400])
+    print(df['sentenceId'][400])
+    print(df['words'][2080010])
+    print(df['sentenceId'][2080010])
     
-    origin[origin['sentenceId']==int(df[20]['sentenceId'])]
-    origin[origin['sentenceId']==int(df[400]['sentenceId'])]
-    origin[origin['sentenceId']==int(df[3080010]['sentenceId'])]
+    print(sentence[sentence['sentenceId']==int(df['sentenceId'][20])]['trigramSentence'])
+    print(sentence[sentence['sentenceId']==int(df['sentenceId'][400])]['trigramSentence'])
+    print(sentence[sentence['sentenceId']==int(df['sentenceId'][2080010])]['trigramSentence'])
     """
+    final = pd.merge(sentence, origin, on='reviewId')
     del origin, sentence
     
-    df = pd.DataFrame(df)
     master = pd.merge(df, final[['sentenceId','trigramSentence','company']], on='sentenceId')
     del final, df
     
-
-
     master['aspect_1'].value_counts().plot.bar()
     company_list = list(master['company'].unique())
     aspect_list = list(master['aspect_1'].unique())
@@ -146,7 +144,7 @@ if __name__ == '__main__':
     microsoft = {}
     for (company, avg) in all_sentence.keys():
         try:
-            microsoft[company] = cosine(all_sentence[('Microsoft_Corp','Leadership')],all_sentence[(company,'Leadership')])
+            microsoft[company] = cosine(all_sentence[('Microsoft_Corp','People and Culture')],all_sentence[(company,'People and Culture')])
         except:
             print(f'{company} had no reivew')
     
@@ -156,7 +154,7 @@ if __name__ == '__main__':
     microsoft2 = {}
     for (company, avg) in all_sentence.keys():
         try:
-            microsoft2[company] = cosine(all_sentence[('Microsoft_Corp','Work Hours')],all_sentence[(company,'Work Hours')])
+            microsoft2[company] = cosine(all_sentence[('Microsoft_Corp','Benefits')],all_sentence[(company,'Benefits')])
         except:
             print(f'{company} had no reivew')
     
