@@ -7,7 +7,6 @@ import pickle
 import pandas as pd
 from tqdm import tqdm
 from collections import Counter
-from gensim.models.phrases import Phrases, Phraser
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from chi_square import to_one_list

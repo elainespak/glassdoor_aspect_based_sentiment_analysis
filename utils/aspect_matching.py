@@ -141,24 +141,5 @@ if __name__ == '__main__':
     
     torch.save(all_sentence, path+'/aspect_size_12/average_sentence_embeddings.pt')
     
-    microsoft = {}
-    for (company, avg) in all_sentence.keys():
-        try:
-            microsoft[company] = cosine(all_sentence[('Microsoft_Corp','People and Culture')],all_sentence[(company,'People and Culture')])
-        except:
-            print(f'{company} had no reivew')
-    
-    result = [(k,v) for k, v in sorted(microsoft.items(), key=lambda item: item[1])]
-    print(result[-40:])
-    
-    microsoft2 = {}
-    for (company, avg) in all_sentence.keys():
-        try:
-            microsoft2[company] = cosine(all_sentence[('Microsoft_Corp','Benefits')],all_sentence[(company,'Benefits')])
-        except:
-            print(f'{company} had no reivew')
-    
-    result2 = [(k,v) for k, v in sorted(microsoft2.items(), key=lambda item: item[1])]
-    print(result2[-40:])
     
     
