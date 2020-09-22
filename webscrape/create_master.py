@@ -123,8 +123,8 @@ def sentence_tokenize(raw):
     
 if __name__ == "__main__":
     
-    path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/'
-    create_masterfile('../scraped_data/2008 to 2018 SnP 500 Firm Data All/', path)
+    #path = '../sample_data/2008 to 2018 SnP 500 Firm Data_Master English Files/'
+    #create_masterfile('../scraped_data/2008 to 2018 SnP 500 Firm Data All/', path)
     
     # Preprocessing
     master = torch.load(path + 'english_glassdoor_reviews.pt')
@@ -140,10 +140,6 @@ if __name__ == "__main__":
     master['ratingCeo'] = master['ratingCeo'].apply(lambda key: d_ceo[key])
     master['ratingBusinessOutlook'] = master['ratingBusinessOutlook'].apply(lambda key: d_bus[key])
     master['ratingRecommendToFriend'] = master['ratingRecommendToFriend'].apply(lambda key: d_friend[key])
-    
-    d_main = ['Overall', 'WorkLifeBalance', 'CultureAndValues', 'SeniorLeadership', 'CareerOpportunities', 'CompensationAndBenefits']
-    for name in d_main:
-        master['rating'+name] = master['rating'+name].apply(lambda n: to_sentiment(n))
     
     # Clean up the sentences
     text_list = ['pros','cons','advice']

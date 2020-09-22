@@ -30,56 +30,21 @@ def decode_pickle(dat):
          }
     return df
 
-
-def cosine(u, v):
-    return np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
-
-
-def label_aspect(a1, a2, a3, dictionary):
-    a1 = dictionary[a1.split(':')[0]]
-    a2 = dictionary[a2.split(':')[0]]
-    a3 = dictionary[a3.split(':')[0]]
-    if a1 in ['?', 'None'] and a2 in ['?', 'None']:
-        return a3
-    elif a1 in ['?', 'None']:
-        return a2
+def fix_label(aspect_1, aspect_2, aspect_3):
+    avoid = ['Overall','None']
+    if aspect_1 in avoid and aspect_2 in avoid:
+        return aspect_3
+    elif aspect_1 in avoid:
+        return aspect_2
     else:
-        return a1
-
-
-def create_input(att_path, aspect_dictionary):
-    
-    with open(att_path, 'r') as f:
-        att = f.read().split('----------------------------------------')
-    
-    sent_dict = []
-    for result in att[1:]:
-        sent = result.strip().split('\n')
-        temp = {'aspect_'+str(i): sent[i] for i in range(1,4)}
-        temp['tokenized_sentence'] = sent[4]
-        temp['att'] = sent[5:]
-        sent_dict.append(temp)
-    
-    df = pd.DataFrame(sent_dict)
-    df['aspect'] = df['aspect_1'].apply(lambda a: a.split(':')[0])
-    #df['aspect'] = df.apply(lambda x: label_aspect(x['aspect_1'], x['aspect_2'], x['aspect_3'], d), axis=1)
-    return df
-
-
-def filter_by_aspect(data, aspect):
-    data_aspect = data[data['aspect'] == aspect]
-    data_aspect = data_aspect[['original', 'rating'+aspect]]
-    data_aspect = data_aspect[data_aspect['rating'+aspect] != 0]
-    data_aspect = data_aspect.reset_index(drop=True)
-    data_aspect['rating'+aspect] = data_aspect['rating'+aspect].apply(lambda x: str(x-1))
-    # index must begin with 0, otherwise triggers the device-side assert triggered error
-    return data_aspect
+        return aspect_1
+        
 
 
 if __name__ == '__main__':
 
     # Parameters
-    texttype = 'pros'
+    texttype = 'cons'
     path = '../sample_data/abae/'+texttype
     
     # Bring data
@@ -107,29 +72,59 @@ if __name__ == '__main__':
     origin = origin[['reviewId','company']]
     sentence = torch.load('../sample_data/master/sentence_match.pt')
     df = pd.DataFrame(df)
-    """
-    print(df['words'][20])
-    print(df['sentenceId'][20])
-    print(df['words'][400])
-    print(df['sentenceId'][400])
-    print(df['words'][2080010])
-    print(df['sentenceId'][2080010])
     
-    print(sentence[sentence['sentenceId']==int(df['sentenceId'][20])]['trigramSentence'])
+    print(df['words'][400])
     print(sentence[sentence['sentenceId']==int(df['sentenceId'][400])]['trigramSentence'])
+    print(df['words'][2080010])
     print(sentence[sentence['sentenceId']==int(df['sentenceId'][2080010])]['trigramSentence'])
-    """
+    
     final = pd.merge(sentence, origin, on='reviewId')
     del origin, sentence
-    
-    master = pd.merge(df, final[['sentenceId','trigramSentence','company']], on='sentenceId')
+    master = pd.merge(df, final[['sentenceId','trigramSentence','company', 'reviewId']], on='sentenceId')
     del final, df
     
+    if texttype == 'pros':
+        master['aspect_1'] = master.apply(lambda df: fix_label(df['aspect_1'], df['aspect_2'],df['aspect_3']), axis=1)
+        
+        labels = {'People and Culture': 'CultureAndValues', 'Location': 'CultureAndValues',
+                  'Pay': 'CompensationAndBenefits', 'Benefits': 'CompensationAndBenefits', 'Perks': 'CompensationAndBenefits',
+                  'Career Opportunities': 'CareerOpportunities', 'Technology': 'CareerOpportunities',
+                  'Work Life Balance': 'WorkLifeBalance',
+                  'Leadership': 'SeniorLeadership',
+                  #'Overall': 'Overall', 'None': 'None',
+                  'Company': 'BusinessOutlook', 
+                  }
+        master['aspect'] = master['aspect_1'].apply(lambda a: labels[a])
+        print(master.head(10))
+    elif texttype == 'cons':
+        master['aspect_1'] = master.apply(lambda df: fix_label(df['aspect_1'], df['aspect_2'],df['aspect_3']), axis=1)
+        
+        labels = {'Leadership': 'SeniorLeadership',
+                  'Overall - Negative': 'CultureAndValues', 'Culture': 'CultureAndValues', 'Overall': 'CultureAndValues', 'People': 'CultureAndValues',
+                  'Pay': 'CompensationAndBenefits', 
+                  'Technology': 'BusinessOutlook', 'Restructuring': 'BusinessOutlook', 'Company': 'BusinessOutlook',
+                  'Structure': 'CareerOpportunities', 'Career Opportunities': 'CareerOpportunities',
+                  'Work Hours': 'WorkLifeBalance'
+                  }
+        master['aspect'] = master['aspect_1'].apply(lambda a: labels[a])
+        print(master.head(10))
+    
+    else:
+        print(' --- None!')
+    
+    # Make evaluation dataframe
+    torch.save(master[['sentenceId', 'reviewId', 'company', 'aspect', 'aspect_1']],
+               f'../sample_data/master/{texttype}_12_aspect_labeled.pt')
+    
+    
+    # Make company embeddings
     master['aspect_1'].value_counts().plot.bar()
+    master['aspect'].value_counts().plot.bar()
     company_list = list(master['company'].unique())
     aspect_list = list(master['aspect_1'].unique())
     
     all_sentence = {}
+    all_sentence_unweighted = {}
     for company in tqdm(company_list):
         for aspect in aspect_list:
             temp = master[(master['company']==company) & (master['aspect_1']==aspect)]
@@ -138,8 +133,12 @@ if __name__ == '__main__':
             else:
                 avg = np.mean(list(temp['sentence_embedding']), axis=0)
                 all_sentence[(company, aspect)] = avg
+                unweighted_avg = np.mean(list(temp['unweighted_sentence_embedding']), axis=0)
+                all_sentence_unweighted[(company, aspect)] = unweighted_avg
     
     torch.save(all_sentence, path+'/aspect_size_12/average_sentence_embeddings.pt')
+    torch.save(all_sentence_unweighted, path+'/aspect_size_12/unweighted_average_sentence_embeddings.pt')
     
-    
-    
+
+    # Done
+    del master
