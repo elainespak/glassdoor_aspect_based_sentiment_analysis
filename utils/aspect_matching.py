@@ -31,7 +31,7 @@ def decode_pickle(dat):
     return df
 
 def fix_label(aspect_1, aspect_2, aspect_3):
-    avoid = ['Overall','None']
+    avoid = ['None']
     if aspect_1 in avoid and aspect_2 in avoid:
         return aspect_3
     elif aspect_1 in avoid:
@@ -44,7 +44,7 @@ def fix_label(aspect_1, aspect_2, aspect_3):
 if __name__ == '__main__':
 
     # Parameters
-    texttype = 'cons'
+    texttype = 'pros'
     path = '../sample_data/abae/'+texttype
     
     # Bring data
@@ -86,12 +86,12 @@ if __name__ == '__main__':
     if texttype == 'pros':
         master['aspect_1'] = master.apply(lambda df: fix_label(df['aspect_1'], df['aspect_2'],df['aspect_3']), axis=1)
         
-        labels = {'People and Culture': 'CultureAndValues', 'Location': 'CultureAndValues',
+        labels = {'People and Culture': 'CultureAndValues', 'Location': 'CultureAndValues', 'Overall': 'CultureAndValues',
                   'Pay': 'CompensationAndBenefits', 'Benefits': 'CompensationAndBenefits', 'Perks': 'CompensationAndBenefits',
                   'Career Opportunities': 'CareerOpportunities', 'Technology': 'CareerOpportunities',
                   'Work Life Balance': 'WorkLifeBalance',
                   'Leadership': 'SeniorLeadership',
-                  #'Overall': 'Overall', 'None': 'None',
+                  'None': 'None',
                   'Company': 'BusinessOutlook', 
                   }
         master['aspect'] = master['aspect_1'].apply(lambda a: labels[a])
@@ -113,7 +113,7 @@ if __name__ == '__main__':
         print(' --- None!')
     
     # Make evaluation dataframe
-    torch.save(master[['sentenceId', 'reviewId', 'company', 'aspect', 'aspect_1']],
+    torch.save(master[['sentenceId', 'reviewId', 'company', 'aspect', 'aspect_1', 'trigramSentence']],
                f'../sample_data/master/{texttype}_12_aspect_labeled.pt')
     
     

@@ -7,7 +7,7 @@ pd.set_option('display.max_columns', 50)
 
 
 # Parameters
-aspect = 'SeniorLeadership' # CultureAndValues CompensationAndBenefits WorkLifeBalance CareerOpportunities
+aspect = 'CultureAndValues' #'SeniorLeadership' CompensationAndBenefits WorkLifeBalance CareerOpportunities
 
 labeled_pros = torch.load('../sample_data/master/pros_12_aspect_labeled.pt')
 labeled_pros = labeled_pros[labeled_pros['aspect']==aspect]

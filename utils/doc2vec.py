@@ -19,7 +19,6 @@ class Doc2VecEmbeddings:
         self.path = path
         self.model_path = model_path
         self.aspect = aspect
-        self.text_type = text_type
         self.tokens = tokens
         self.tags = tags
         
@@ -42,17 +41,21 @@ class Doc2VecEmbeddings:
             self.doc2vec_model.save(self.model_path)
         print(f' The model has {len(self.doc2vec_model.docvecs)} documents')
     
-    def get_most_similar_companies(self, gics_path, group, group_number, company_of_interest):
+    def get_gics_companies(self, gics_path, group, group_number):
+        self.group = group
+        self.group_number = group_number
         self.company_gics = torch.load(gics_path)
-        print(list(self.company_gics[group].unique()))
+        #print(list(self.company_gics[group].unique()))
         self.companies = list(self.company_gics[self.company_gics[group]==group_number][self.tags].unique())
-        print(f' In {group_number} of {group}, \n {self.companies}\n exist')
-        
+        #print(f' In {group_number} of {group}, \n {self.companies}\n exist')
+    
+    def get_most_similar_companies(self, company_of_interest):
+        self.company_of_interest = company_of_interest
         self.most_similar_companies = []
-        for (company, similarity) in self.doc2vec_model.docvecs.most_similar(company_of_interest,topn=len(self.doc2vec_model.docvecs)):
+        for (company, similarity) in self.doc2vec_model.docvecs.most_similar(self.company_of_interest,topn=len(self.doc2vec_model.docvecs)):
             if company in self.companies:
                 self.most_similar_companies.append((company,similarity))
-        print(f'\n*** Most similar to {company_of_interest} in {group_number}:')
+        print(f'\n*** Most similar to {self.company_of_interest} in {self.group_number}:')
         print(self.most_similar_companies)
         
 

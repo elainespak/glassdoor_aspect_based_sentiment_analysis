@@ -3,8 +3,6 @@
 import torch
 import numpy as np
 import pandas as pd
-from gensim.models import Doc2Vec
-from tf_idf_keyword_extraction import calculate_tf_idf
 pd.set_option('display.max_columns', 50)
 
 
@@ -36,68 +34,12 @@ sentence = torch.load('../sample_data/master/sentence_match.pt')
 final = pd.merge(sentence, origin, on='reviewId')[['textType', 'sentenceId', 'trigramSentence', 'company']]
 del origin, sentence
 
-final = pd.merge(final, merged, on='company')
-torch.save(final, '../sample_data/master/sentence_gics.pt')
+sentence_gics = pd.merge(final, merged, on='company')
+torch.save(sentence_gics, '../sample_data/master/sentence_gics.pt')
+
+company_gics = sentence_gics[['company','gvkey','ggroup','gind','gsector','gsubind']].drop_duplicates()
+company_gics = company_gics.reset_index(drop=True)
+torch.save(company_gics, '../sample_data/master/company_gics.pt')
 ###
 
 
-# Cosine similarity
-if __name__ == '__main__':
-    
-    # Parameters
-    path = '../sample_data/'
-    group = 'gind' # 'ggroup'
-    text_type = 'pros'
-    df = torch.load(path+'master/sentence_gics.pt')
-    
-    groups = list(df[group].unique())
-    companies = list(df[df[group]==452020]['company'].unique())
-    company_of_interest = 'Seagate_Technology_Plc'
-    aspect_of_interest = 'Benefits'
-    
-    # ABAE sentence vector averaged
-    all_sentence = torch.load(path+f'abae/{text_type}/aspect_size_12/unweighted_average_sentence_embeddings.pt')
-    
-    aspects = list(set([k[1] for k in all_sentence.keys()]))
-    mine = {}
-    for (company, avg) in all_sentence.keys():
-        if company in companies and avg == aspect_of_interest:
-            try:
-                mine[company] = cosine(all_sentence[(company_of_interest,aspect_of_interest)],all_sentence[(company,avg)])
-            except:
-                print(f'{company} had no review')
-    
-    result = [(k,v) for k, v in sorted(mine.items(), key=lambda item: item[1], reverse=True)]
-    
-    # Vanilla doc2vec
-    doc2vec_model = Doc2Vec.load(path+f'abae/{text_type}/{text_type}_vanilla_doc2vec_model')
-    l = []
-    for (c, s) in doc2vec_model.docvecs.most_similar(company_of_interest, topn=606):
-        #l.append((c,s))
-        if c in companies:
-            l.append((c,s))
-    
-    print('Mine:')
-    print(result)
-    print('Vanilla:')
-    print(l)
-
-
-### Make tf-idf
-#df = torch.load('../sample_data/master/sentence_gics.pt')
-#aspect = 'People and Culture'
-
-#final = df.to_dict('records')
-
-tfidf = torch.load(path+'abae/pros/aspect_size_12/master_tf_idf.pt')
-tfidf = tfidf[tfidf['aspect_1']==aspect_of_interest]
-tfidf = calculate_tf_idf(tfidf)
-tfidf['conml'] = tfidf.index
-
-test = tfidf[tfidf['conml'].isin(companies)]
-test['amazing']
-
-
-test[test['conml']==company_of_interest].transpose().drop(['conml']).sort_values(by=company_of_interest).tail(30)
-
-###
