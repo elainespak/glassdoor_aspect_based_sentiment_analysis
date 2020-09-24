@@ -44,7 +44,7 @@ def fix_label(aspect_1, aspect_2, aspect_3):
 if __name__ == '__main__':
 
     # Parameters
-    texttype = 'pros'
+    texttype = 'cons'
     path = '../sample_data/abae/'+texttype
     
     # Bring data
@@ -116,7 +116,14 @@ if __name__ == '__main__':
     torch.save(master[['sentenceId', 'reviewId', 'company', 'aspect', 'aspect_1', 'trigramSentence']],
                f'../sample_data/master/{texttype}_12_aspect_labeled.pt')
     
+    # Combine pros and cons
+    dat1 = torch.load('../sample_data/master/pros_12_aspect_labeled.pt')
+    dat2 = torch.load('../sample_data/master/cons_12_aspect_labeled.pt')
+    dat = pd.concat([dat1, dat2])
+    dat = dat.reset_index(drop=True)
+    torch.save(dat, '../sample_data/master/all_12_aspect_labeled.pt')
     
+    """
     # Make company embeddings
     master['aspect_1'].value_counts().plot.bar()
     master['aspect'].value_counts().plot.bar()
@@ -142,3 +149,4 @@ if __name__ == '__main__':
 
     # Done
     del master
+    """

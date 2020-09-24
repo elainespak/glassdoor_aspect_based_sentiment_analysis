@@ -62,7 +62,7 @@ class Doc2VecEmbeddings:
 if __name__ == '__main__':
     
     # Parameters
-    text_type = 'pros'
+    text_type = 'all'
     aspects = ['CultureAndValues', 'CompensationAndBenefits', 'CareerOpportunities',
                'BusinessOutlook', 'SeniorLeadership', 'WorkLifeBalance']
     path = f'../sample_data/master/{text_type}_12_aspect_labeled.pt'
@@ -72,17 +72,15 @@ if __name__ == '__main__':
     
     # Make doc2vec model for aspects
     for aspect in aspects:
-        model_path = f'../sample_data/abae/{text_type}/{text_type}_{aspect}_doc2vec_model'
+        #model_path = f'../sample_data/abae/{text_type}/{text_type}_{aspect}_doc2vec_model'
+        model_path = f'../sample_data/master/all_{aspect}_doc2vec_model'
         embeddings = Doc2VecEmbeddings(path, model_path, aspect, tokens, tags)
         embeddings.get_model()
     
     # Make vanilla doc2vec model
-    model_path = f'../sample_data/abae/{text_type}/{text_type}_{aspect}_doc2vec_model'
-    embeddings = Doc2VecEmbeddings(path, model_path, aspect, tokens, tags)
-    embeddings.get_model()
-    
     aspect = None
-    model_path = f'../sample_data/abae/{text_type}/{text_type}_vanilla_doc2vec_model'
+    #model_path = f'../sample_data/abae/{text_type}/{text_type}_vanilla_doc2vec_model'
+    model_path = '../sample_data/master/all_vanilla_doc2vec_model'
     embeddings = Doc2VecEmbeddings(path, model_path, aspect, tokens, tags)
     embeddings.get_model()
 

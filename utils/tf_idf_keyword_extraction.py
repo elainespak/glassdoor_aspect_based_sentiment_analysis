@@ -34,7 +34,7 @@ def get_most_common_trigrams(words, n=100):
 if __name__ == "__main__":
 
     # Parameters
-    texttype = 'pros'
+    texttype = 'cons'
     path = '../sample_data/abae/'+texttype
     
     # Bring data
@@ -68,14 +68,38 @@ if __name__ == "__main__":
     master = pd.merge(df, final[['sentenceId','trigramSentence','company']], on='sentenceId')
     del final, df
     
-    # tf-idf
+    # Make master tf-idf file
     master2 = master.groupby(['company','aspect_1'])['trigramSentence'].apply(list).reset_index(name='trigramSentence')
     del master
     master2['trigramSentence'] = master2['trigramSentence'].apply(lambda s: to_one_list(s))
     torch.save(master2, path+'/aspect_size_12/master_tf_idf.pt')
     
-    # for each aspect...
-    test = master2[master2['aspect_1']=='People and Culture']
-    tfidf = calculate_tf_idf(test)
+    # Extract keywords with tf-idf per industry per aspect
+    text_type = 'cons'
+    group = 'gind' # 'ggroup'
+    group_number = 201050
+    company_of_interest = 'General_Electric_Co'
+    
+    #aspect = 'SeniorLeadership'
+    aspect_of_interest = 'Leadership'
+    master = torch.load(f'../sample_data/abae/{text_type}/aspect_size_12/master_tf_idf.pt')
+    company_gics = torch.load('../sample_data/master/company_gics.pt')
+    master = pd.merge(master, company_gics, on='company')
+    
+    tfidf = master[(master['aspect_1']==aspect_of_interest) & (master[group]==group_number)]
+    tfidf = calculate_tf_idf(tfidf)
+    tfidf['conml'] = tfidf.index
+    
+    tfidf[tfidf['conml']==company_of_interest].transpose().drop(['conml']).sort_values(by=company_of_interest).tail(30)
+    #tfidf['yes_man']
+    
+    final = tfidf.T[:-1]
+    final = final[(final != 0).sum(1) <= 1]
+    test = final.T
+    test['conml'] = test.index
+    
+    test[test['conml']==company_of_interest].transpose().drop(['conml']).sort_values(by=company_of_interest).tail(30)
+    
+
     
     
