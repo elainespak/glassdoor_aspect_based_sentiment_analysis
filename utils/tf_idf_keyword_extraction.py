@@ -26,9 +26,28 @@ def calculate_tf_idf(df):
     result.index = list(df['company'])
     return result
 
+
 def get_most_common_trigrams(words, n=100):
     keywords = Counter(w for w in words if len(w.split('_')) >= 3).most_common(n)
     return [word for word, freq in keywords]
+
+
+def get_most_frequent_words(all_companies_words):
+    frequency = Counter(all_companies_words)
+    d_descending = {k: v for k, v in sorted(frequency.items(),
+                                            key=lambda item: item[1],
+                                            reverse=True)}
+    drop_words = list(d_descending.keys())[:10]
+    print(drop_words)
+    return drop_words
+
+
+def drop_most_frequent_words(words, drop_words):
+    for drop in drop_words:
+        words = list(filter(lambda a: a != drop, words))
+        print(words.count(drop))
+    return words
+    
 
 
 if __name__ == "__main__":
@@ -75,10 +94,10 @@ if __name__ == "__main__":
     torch.save(master2, path+'/aspect_size_12/master_tf_idf.pt')
     
     # Extract keywords with tf-idf per industry per aspect
-    text_type = 'cons'
-    group = 'gind' # 'ggroup'
-    group_number = 201050
-    company_of_interest = 'General_Electric_Co'
+    text_type = 'pros'
+    group ='ggroup' #'gind'
+    group_number = 2030
+    company_of_interest = 'American_Airlines_Group_Inc'
     
     #aspect = 'SeniorLeadership'
     aspect_of_interest = 'Leadership'
@@ -87,8 +106,13 @@ if __name__ == "__main__":
     master = pd.merge(master, company_gics, on='company')
     
     tfidf = master[(master['aspect_1']==aspect_of_interest) & (master[group]==group_number)]
+    most_frequent_words = get_most_frequent_words(tfidf['trigramSentence'].sum())
+    
     tfidf = calculate_tf_idf(tfidf)
     tfidf['conml'] = tfidf.index
+    
+    tfidf = tfidf.drop(columns=most_frequent_words)
+#    drop_most_frequent_words(words, drop_words)
     
     tfidf[tfidf['conml']==company_of_interest].transpose().drop(['conml']).sort_values(by=company_of_interest).tail(30)
     #tfidf['yes_man']
