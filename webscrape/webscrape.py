@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from webscrape import *
+from tools import *
 
 # Get the names of the S&P 500 companies
 alldat = pd.read_csv('2018_SnP500_Names_Subsidiaries.csv', delimiter=',')
