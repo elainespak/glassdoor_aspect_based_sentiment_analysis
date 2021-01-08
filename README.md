@@ -46,8 +46,7 @@ Please refer to the 'webscrape' folder.
       - business outlook: `['busi', 'outlook', 'futur', 'unit', 'model', 'run', 'analyst', 'uncertain', 'line', 'bottom', 'front', 'financi', 'oper', 'custom', 'strategi', 'servic', 'rude', 'focu', 'sale', 'deal', 'repres', 'rep', 'associ', 'goal', 'sell', 'product', 'specialist', 'solut', 'consult', 'focus', 'client', 'floor', 'unrealist']`
 3. Apply [Attention-Based Aspect Extraction (ABAE)](https://www.aclweb.org/anthology/P17-1036.pdf)
    - Original code published and generously shared by the authors [here](https://github.com/ruidan/Unsupervised-Aspect-Extraction). Check the link for specific steps.
-   - Note for Windows users: The code must run with Python 2.7; For training, run the following to avoid errors:
-      ```set THEANO_FLAGS=device=cuda,floatX=float32 & python train.py --emb ../preprocessed_data/$domain/w2v_embedding --domain $domain --aspect-size $k -o output_dir -v $vocab_size```
+   - Note for Windows users: The code must run with Python 2.7; For training, run the following to avoid errors: `set THEANO_FLAGS=device=cuda,floatX=float32 & python train.py --emb ../preprocessed_data/$domain/w2v_embedding --domain $domain --aspect-size $k -o output_dir -v $vocab_size`; Similarly, for evaluation, run the following: `set THEANO_FLAGS=device=cuda,floatX=float32 & python evaluation.py --emb ../sample_data/$domain/w2v_embedding --domain $domain --aspect-size $k -v $vocab_size`
    - For our purposes, we reached the best result when `k=12` and `vocab_size=12000`
    - Final words on Pros (truncated to the first 10 words):
       - `['benefit', '401k_matching', 'insurance', 'eap', 'benfits', 'tuition_reimbursement', 'medical_dental_vision', 'benifits', 'espp', 'profit_sharing']`
