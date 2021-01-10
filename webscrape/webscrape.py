@@ -2,17 +2,20 @@
 
 from tools import *
 
-# Get the names of the S&P 500 companies
-alldat = pd.read_csv('2018_SnP500_Names_Subsidiaries.csv', delimiter=',')
-names = alldat.Company
+### Parameters
+#alldat = pd.read_csv('2018_SnP500_Names_Subsidiaries.csv', delimiter=',')
+#alldat.Company
+names = ['EBS Healthcare'] ### !!! ### Define your own company list
+driver_path = r'C:\Users\elain\chromedriver.exe' ### !!! ### Define your own chromedriver path
 
-## Runs fine except for the "big companies"
+
+### Runs fine except for the "big companies"
 company_tokens = {}
 
 for name in names:
     
     # Generate the company-specific part of the url
-    company_token = get_company_token(name)
+    company_token = get_company_token(name, driver_path)
     company_tokens[name] = company_token
     #company_token = 'Scripps-Networks-Interactive-Reviews-E38201'
     #company_token = 'First-Republic-Bank-Reviews-E859'
@@ -46,14 +49,14 @@ for name in names:
             page = requests.get(url+page_number+html, headers={'user-agent': 'Mozilla/5.0'})
             webpage = page.text
 
-            if 'reviewId' not in webpage: # If we run out of pages, exit the while loop
+            if 'reviewid=' not in webpage: # If we run out of pages, exit the while loop
                 end_of_reviews = True
             else:
                 for dct in get_individual_reviews(webpage):
                     individual_reviews[dct['reviewId']] = dct
 
                 if num%100 == 0: # If we reach page 300, save the crawled data into a txt file and empty it
-                    with open(re.sub(' ', '_', name)+'_individual_reviews_'+str(num/100)+'.txt', 'w') as file:
+                    with open(re.sub(' ', '_', name)+'_individual_reviews_'+str(int(num/100))+'.txt', 'w') as file:
                         file.write(json.dumps(individual_reviews))
                     individual_reviews.clear()
                     individual_reviews = {dct['reviewId']: dct for dct in get_individual_reviews(webpage)} 
@@ -77,4 +80,4 @@ for name in names:
 
     print(str(len(list(names)) - list(names).index(name) - 1) + ' more companies to go')
     print('---------------------------')
-    time.sleep(5)
+    time.sleep(4)

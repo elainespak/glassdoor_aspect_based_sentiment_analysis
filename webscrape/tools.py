@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-# coding: utf-8
+# -*- coding: utf-8 -*-
 
-# Import necessary packages
+### Import necessary packages
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import time
@@ -12,11 +11,7 @@ import json
 from random import randint
 
 
-# Get the names of the S&P 500 companies
-alldat = pd.read_csv('./2018_SnP500_Names_Subsidiaries.csv', delimiter=',')
-names = alldat.Company
-
-def get_company_token(company):
+def get_company_token(company, driver_path):
     '''
     Every company's Glassdoor review page url includes a randomly-assigned token
     (e.g., Booz Allen Hamilton: E2735)
@@ -28,7 +23,7 @@ def get_company_token(company):
     options.add_argument('--ignore-certificate-errors')
     options.add_argument("--test-type")
     options.binary_location = "/usr/bin/chromium"
-    driver = webdriver.Chrome() # paranthesis is empty since the driver is in the same path
+    driver = webdriver.Chrome(driver_path) # paranthesis is empty since the driver is in the same path
     driver.get('http://google.com/') # it is faster to google than to search for the company on Glassdoor (crappy site)
     
     # Iterate through the list of company names
@@ -99,27 +94,9 @@ def get_individual_reviews(webpage_text):
 
         # Look for the employer's response to the review, if it exists
         if temp_dct['employerResponses'] != []:
-            temp_dct['employerResponses'] = re.findall('{"response":.*?,"countHelpful":', review_second_half)[0][:-16]+'}'
+            temp_dct['employerResponses'] = '{'+re.findall('"response":".*?,"countHelpful":', review_second_half)[0][:-16]+'}'
 
         review_dct_lst.append(temp_dct)
         
     return review_dct_lst
 
-
-if __name__ == "__main__":
-    
-    company_token = get_company_token(alldat.Company[2])
-    print(f'This is test company token: {company_token}')
-    
-    url = 'https://www.glassdoor.com/Reviews/' + company_token
-    page_number = ''
-    num = 2
-    html = '.htm'
-    page = requests.get(url+page_number+html, headers={'user-agent': 'Mozilla/5.0'})
-    webpage = page.text
-    
-    overall_stats = get_overall_stats(webpage)
-    print(f'This is overall stats: \n{overall_stats}')
-    
-    ten_reviews = get_individual_reviews(webpage)
-    print(f'This is the first ten reviews(test): \n{ten_reviews}')
