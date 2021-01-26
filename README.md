@@ -1,14 +1,7 @@
 # Exploring Employee Experience & Discovering Company Characteristics with Glassdoor Reviews
-Anonymous company rating and review websites, such as [Glassdoor](https://www.glassdoor.com/index.htm), are a platform for employees to anonymously write about their work experience. **Glassdoor data is extremely rich, both in quantity and dimensions.** A user can anonymously write about her experience in the 'summary,' 'pros,' 'cons,' and 'advice' categories, and rate her experience in the following 8 aspects:
-- Overall
-- Culture & Value
-- Career Opportunities
-- Senior Management
-- Work/Life Balance
-- Compensation and Benefits
-- Approval of CEO
-- Recommendation to Friend
-- Business Outlook
+Anonymous company rating and review websites, such as [Glassdoor](https://www.glassdoor.com/index.htm), are a platform for employees to anonymously write about their work experience. **Glassdoor data is extremely rich, both in quantity and dimensions.**
+
+A user can anonymously write about her experience in the 'summary,' 'pros,' 'cons,' and 'advice' categories, and rate her experience in the following 9 aspects: *Overall, Culture & Value, Career Opportunities, Senior Management, Work/Life Balance, Compensation and Benefits, Approval of CEO, Recommendation to Friend, Business Outlook*
 
 ## Data Collection
 I created a custom webscraper and collected Glassdoor review data of every company that belonged to S & P 500 at least once from year 2008 to 2018.
